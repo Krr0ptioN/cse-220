@@ -1,6 +1,6 @@
 """Sample Hello World application."""
 
 
-def hello():
+def health():
     """Return a friendly greeting."""
-    return "Hello django-api"
+    return {"health": "ok"}

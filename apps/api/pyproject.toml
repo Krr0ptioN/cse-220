@@ -1,6 +1,6 @@
 [tool.coverage.run]
 branch = true
-source = [ "django_api" ]
+source = [ "api" ]
 
 [tool.coverage.report]
 exclude_lines = ['if TYPE_CHECKING:']
@@ -24,7 +24,7 @@ license = 'Proprietary'
 readme = 'README.md'
 
   [[tool.poetry.packages]]
-  include = "django_api"
+  include = "api"
 
   [tool.poetry.dependencies]
   python = ">=3.12,<3.15"
