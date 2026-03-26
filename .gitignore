@@ -74,3 +74,5 @@ infra/minio/data
 apps/api/**/*.log
 apps/api/logs/
 .logs/backend/
+/nx
+/nx.bat
