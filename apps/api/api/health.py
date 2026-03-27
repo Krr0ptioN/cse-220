@@ -8,4 +8,5 @@ def health():
     return JsonResponse({
         "status": "ok",
         "service": "flavormap-api",
+        "version": "0.1.0"
     })
