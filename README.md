@@ -15,8 +15,3 @@ where users can discover restaurants, read and write reviews, rate their dining 
 manage their favorite spots. Think of  it as a simplified version of Yelp or Google Reviews, built
 with Django and Next.js.  
 
-### 🚀 Backend Features
-* *RESTful API:* Powered by Django Rest Framework.
-* *Authentication:* Secure user login and registration.
-* *Database:* Optimized for restaurant and review data.
-*
