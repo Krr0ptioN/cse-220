@@ -1,0 +1,9 @@
+{
+  "name": "ui-module-map",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ui/modules/map/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project ui-module-map --web",
+  "targets": {}
+}

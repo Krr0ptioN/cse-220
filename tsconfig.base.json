@@ -14,7 +14,16 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "ui-common": ["libs/ui/common/src/index.ts"],
+      "ui-common/server": ["libs/ui/common/src/server.ts"],
+      "ui-common/components/*": ["libs/ui/common/src/lib/components/*"],
+      "ui-common/lib/*": ["libs/ui/common/src/lib/*"],
+      "ui-common/hooks/*": ["libs/ui/common/src/lib/hooks/*"],
+      "@flavor-map/ui-module-map": ["libs/ui/modules/map/src/index.ts"],
+      "@flavor-map/ui-module-map/server": ["libs/ui/modules/map/src/server.ts"],
+      "@/*": ["apps/web/src/*"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
