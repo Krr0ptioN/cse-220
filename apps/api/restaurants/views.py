@@ -2,8 +2,9 @@
 
 from api_http import Controller, controller, delete, get, patch, post
 from restaurants.dtos import RestaurantDto
-from restaurants.models import Restaurant
+from restaurants.models import Restaurant, Category, PriceRange
 from users.models import UserRole
+import json
 
 @controller()
 class RestaurantsController(Controller):
@@ -88,23 +89,96 @@ class RestaurantsController(Controller):
     @patch("<slug:slug>/")
     def restaurant_update(self, slug):
         """Scaffold for owner-only restaurant update."""
-        # TODO(implementation guide):
-        # 1) Repeat auth + owner role checks (same api_http `self.error(...)` pattern as create).
-        # 2) Load restaurant by slug:
-        #    - restaurant = Restaurant.objects.filter(slug=slug).first()
-        #    - if restaurant is None: return self.error(status=404, code="not_found", message="Restaurant not found.")
-        # 3) Ownership check:
-        #    - if restaurant.owner_id != user.id: return self.error(status=403, code="forbidden", ...)
-        # 4) Parse partial payload, validate allowed fields only, and reject empty patch payload.
-        # 5) Apply validated fields, save model, and serialize with DTO:
-        #    - return self.json({"data": RestaurantDto.from_model(restaurant)})
-        return self.error(
-            status=501,
-            code="not_implemented",
-            message=(
-                f"restaurant_update for slug '{slug}' is scaffolded but not implemented."
-            ),
-        )
+        user = getattr(self.request, "user", None)
+        if user is None or not user.is_authenticated:
+            return self.error(
+                status=401,
+                code="auth_required",
+                message="Authentication is required.",
+            )
+        if user.role != UserRole.OWNER:
+            return self.error(
+                status=403,
+                code="forbidden",
+                message="Only restaurant owners can update their restaurants.",
+            )
+
+        restaurant = Restaurant.objects.filter(slug=slug).first()
+        if restaurant is None:
+            return self.error(
+                status=404,
+                code="not_found",
+                message="Restaurant not found.",
+            )
+        if restaurant.owner_id != user.id: 
+            return self.error(
+                status=403, 
+                code="forbidden", 
+                message="You can only update your own restaurants.")
+
+        try:
+            body = json.loads(self.request.body)
+        except (json.JSONDecodeError, ValueError):
+            return self.error(
+                status=400,
+                code="invalid_json",
+                message="Request body contains invalid JSON.",
+            )
+        allowed_fields = {
+            "name": str,
+            "description": str,
+            "phone": str,
+            "website": str,
+            "address_line1": str,
+            "address_line2": str,
+            "city": str,
+            "district": str,
+            "postal_code": str,
+            "price_range": str,
+            "category_id": str,
+        }
+        update_fields = {}
+        for field, field_type in allowed_fields.items():
+            if field in body:
+                value = body[field]
+                if not isinstance(value, field_type):
+                    return self.error(
+                        status=400,
+                        code="invalid_field_type",
+                        message=f"Field '{field}' must be of type {field_type.__name__}.",
+                    )
+                update_fields[field] = value    
+        if not update_fields:
+            return self.error(
+                status=400,
+                code="empty_payload",
+                message="At least one valid field must be provided for update.",
+            )
+        
+        if "price_range" in update_fields:
+            price_range_value = update_fields["price_range"]
+            if price_range_value not in PriceRange.values:
+                return self.error(
+                    status=400,
+                    code="invalid_price_range",
+                    message=f"Invalid price range. Allowed values are: {', '.join(PriceRange.values)}.",
+                )
+
+        if "category_id" in update_fields:
+            category = Category.objects.filter(id=update_fields["category_id"]).first()
+            if category is None:
+                return self.error(
+                    status=400,
+                    code="invalid_category",
+                    message="Category with the provided ID does not exist.",
+                )
+            update_fields["category"] = category
+            del update_fields["category_id"]
+
+        for field, value in update_fields.items():
+            setattr(restaurant, field, value)
+        restaurant.save()
+        return self.json({"data": RestaurantDto.from_model(restaurant)})
 
     @delete("<slug:slug>/")
     def restaurant_delete(self, slug):
