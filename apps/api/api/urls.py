@@ -1,7 +1,10 @@
 """URL patterns for the api app."""
 
-from api_http import build_urlpatterns
+from . import views
+from django.urls import path
+from . import health
 
-from .health import HealthController
-
-urlpatterns = build_urlpatterns(HealthController)
+urlpatterns = [
+    path("", lambda request: health.health(), name="health"),
+    path("resturants/", views.create_resturant, name="resturants"),
+]
