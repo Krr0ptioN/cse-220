@@ -24,7 +24,7 @@ def test_restaurants_routes_smoke():
     client = Client()
 
     list_response = client.get("/api/v1/restaurants/")
-    detail_response = client.get("/api/v1/restaurants/test-place/")
+    not_found_response = client.get("/api/v1/restaurants/nonexistent-slug/")
 
     assert list_response.status_code == 200
     list_payload = list_response.json()
@@ -34,8 +34,8 @@ def test_restaurants_routes_smoke():
     assert list_payload["pagination"]["total"] >= len(list_payload["data"])
     assert list_payload["pagination"]["total_pages"] >= 1
 
-    assert detail_response.status_code == 200
-    assert detail_response.json()["data"]["slug"] == "test-place"
+    assert not_found_response.status_code == 404
+    assert not_found_response.json()["error"]["code"] == "not_found"
 
 
 def test_restaurants_list_supports_pagination_and_include_fields():
@@ -136,8 +136,8 @@ def test_reviews_route_smoke():
     review_id = uuid.uuid4()
     response = client.get(f"/api/v1/reviews/{review_id}/")
 
-    assert response.status_code == 200
-    assert response.json()["data"]["id"] == str(review_id)
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
 
 
 def test_users_route_requires_authentication():

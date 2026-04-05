@@ -1,3 +1,5 @@
+"""Views for restaurant endpoints."""
+
 from api_http import Controller, controller, delete, get, patch, post
 from restaurants.dtos import RestaurantDto
 from restaurants.models import Restaurant, Category
@@ -40,6 +42,7 @@ class RestaurantsController(Controller):
 
     @get("<slug:slug>/")
     def restaurant_detail(self, slug):
+        """Return restaurant detail with full DTO serialization."""
         restaurant = Restaurant.objects.filter(slug=slug).first()
         if restaurant is None:
             return self.error(

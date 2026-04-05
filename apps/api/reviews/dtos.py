@@ -10,9 +10,6 @@ class ReviewDto(BaseDto):
 
     field_map = {
         "id": "id",
-        "restaurant": "restaurant_id",
-        "user": "user_id",
-        "parent": "parent_id",
         "rating": "rating",
         "content": "content",
         "like_count": "like_count",
@@ -22,6 +19,25 @@ class ReviewDto(BaseDto):
     }
 
     relation_map = {
-        "restaurant": dto_relation("restaurant", RestaurantDto),
         "user": dto_relation("user", UserDto),
+        "restaurant": dto_relation("restaurant", RestaurantDto),
     }
+
+    default_with = ("user",)
+
+
+class ReviewLikeDto(BaseDto):
+    """Review reaction response DTO."""
+
+    field_map = {
+        "id": "id",
+        "is_like": "is_like",
+        "created_at": "created_at",
+    }
+
+    relation_map = {
+        "user": dto_relation("user", UserDto),
+        "review": dto_relation("review", ReviewDto),
+    }
+
+    default_with = ("user",)
