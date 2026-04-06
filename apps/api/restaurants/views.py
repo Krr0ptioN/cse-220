@@ -1,6 +1,16 @@
 """Views for restaurant endpoints."""
 
-from api_http import Controller, controller, delete, get, patch, post
+from api_http import (
+    Controller,
+    UserIsAuthenticated,
+    UserRoleRequired,
+    controller,
+    delete,
+    get,
+    guard,
+    patch,
+    post,
+)
 from restaurants.dtos import RestaurantDto
 from restaurants.models import Restaurant, Category
 from users.models import UserRole
@@ -55,17 +65,18 @@ class RestaurantsController(Controller):
         return self.json({"data": data})
 
     @post()
+    @guard(UserIsAuthenticated)
+    @guard(UserRoleRequired(UserRole.OWNER))
     def restaurant_create(self, data: RestaurantDto):
         user = getattr(self.request, "user", None)
-        if user is None or not user.is_authenticated:
-            return self.error(status=401, code="auth_required", message="Authentication is required.")
-
-        if user.role != UserRole.OWNER:
-            return self.error(status=403, code="forbidden", message="Only restaurant owners can create restaurants.")
 
         category = Category.objects.filter(id=data.category_id).first()
         if not category:
-            return self.error(status=400, code="invalid_category", message="Category does not exist.")
+            return self.error(
+                status=400,
+                code="invalid_category",
+                message="Category does not exist."
+            )
 
         restaurant = Restaurant.objects.create(
             name=data.name,
@@ -80,7 +91,20 @@ class RestaurantsController(Controller):
         return self.created({"data": RestaurantDto.from_model(restaurant)})
 
     @patch("<slug:slug>/")
+    @guard(UserIsAuthenticated)
+    @guard(UserRoleRequired(UserRole.OWNER))
     def restaurant_update(self, slug):
+        """Scaffold for owner-only restaurant update."""
+        # TODO: (implementation guide)
+        # 1)  auth check (skip)
+        # 2) Load restaurant by slug:
+        #    - restaurant = Restaurant.objects.filter(slug=slug).first()
+        #    - if restaurant is None: return self.error(status=404, code="not_found", message="Restaurant not found.")
+        # 3) Ownership check:
+        #    - if restaurant.owner_id != user.id: return self.error(status=403, code="forbidden", ...)
+        # 4) Parse partial payload, validate allowed fields only, and reject empty patch payload.
+        # 5) Apply validated fields, save model, and serialize with DTO:
+        #    - return self.json({"data": RestaurantDto.from_model(restaurant)})
         return self.error(
             status=501,
             code="not_implemented",
@@ -88,9 +112,17 @@ class RestaurantsController(Controller):
         )
 
     @delete("<slug:slug>/")
+    @guard(UserIsAuthenticated)
+    @guard(UserRoleRequired(UserRole.ADMIN))
     def restaurant_delete(self, slug):
-        return self.error(
-            status=501,
-            code="not_implemented",
-            message=f"restaurant_delete for slug '{slug}' is scaffolded but not implemented.",
-        )
+        """Scaffold for admin-only restaurant deletion."""
+        restaurant = Restaurant.objects.filter(slug=slug).first()
+        if restaurant is None:
+            return self.error(
+                status=404,
+                code="not_found",
+                message="Restaurant not found.",
+            )
+
+        restaurant.delete()
+        return self.no_content()

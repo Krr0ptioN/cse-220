@@ -42,8 +42,9 @@ jobs:
         with:
           script: |
             const required = [
-              'CI / Lint and Build',
-              'PR Title / Validate PR title',
+              'Lint and Build',
+              'Validate PR title',
+              'GitGuardian Security Checks'
             ]
             const { owner, repo } = context.repo
             const ref = context.payload.pull_request.head.sha
@@ -56,6 +57,7 @@ jobs:
             })
 
             const failures = []
+
             for (const checkName of required) {
               const match = checks.find((c) => c.name === checkName)
               if (!match || match.conclusion !== 'success') {

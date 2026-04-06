@@ -1,5 +1,5 @@
 """Public API for the internal api_http library."""
-
+from .guards import UserIsAuthenticated, UserRoleRequired, guard
 from .errors import (
     ApiHttpError,
     ConflictError,
@@ -58,4 +58,7 @@ __all__ = [
     "post",
     "put",
     "use",
+    "guard",
+    "UserIsAuthenticated",
+    "UserRoleRequired",
 ]

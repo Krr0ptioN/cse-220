@@ -1,8 +1,5 @@
 import './global.css';
-import { Geist } from 'next/font/google';
 import { cn, ThemeProvider } from 'ui-common';
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata = {
   title: 'Flavor Map',
@@ -15,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={cn('font-sans', geist.variable)}>
+    <html lang="en" className={cn('font-sans')}>
       <body className="bg-background text-foreground antialiased">
         <ThemeProvider>{children}</ThemeProvider>
       </body>
