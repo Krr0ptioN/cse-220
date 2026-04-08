@@ -24,6 +24,12 @@ jobs:
           node-version: 20
           cache: pnpm
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 8
+          run_install: false
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -31,9 +37,6 @@ jobs:
 
       - name: Install Poetry
         run: pipx install poetry
-
-      - name: Install pnpm
-        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install
