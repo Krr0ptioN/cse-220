@@ -67,7 +67,7 @@ class RestaurantsController(Controller):
     @post()
     @guard(UserIsAuthenticated)
     @guard(UserRoleRequired(UserRole.OWNER))
-    def restaurant_create(self, data: RestaurantDto):
+    def create_restaurant(self, data: RestaurantDto):
         user = getattr(self.request, "user", None)
 
         category = Category.objects.filter(id=data.category_id).first()
@@ -78,6 +78,7 @@ class RestaurantsController(Controller):
                 message="Category does not exist."
             )
 
+        # TODO: Adding level for phone, price, ... validation
         restaurant = Restaurant.objects.create(
             name=data.name,
             description=data.description,
@@ -114,7 +115,7 @@ class RestaurantsController(Controller):
     @delete("<slug:slug>/")
     @guard(UserIsAuthenticated)
     @guard(UserRoleRequired(UserRole.ADMIN))
-    def restaurant_delete(self, slug):
+    def delete_restaurant(self, slug):
         """Scaffold for admin-only restaurant deletion."""
         restaurant = Restaurant.objects.filter(slug=slug).first()
         if restaurant is None:
