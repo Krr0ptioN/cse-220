@@ -35,6 +35,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "corsheaders",
+    "rest_framework",
+    "drf_spectacular",
     # Local apps
     "api",
     "users",
@@ -131,3 +133,40 @@ else:
         cast=lambda v: [s.strip() for s in v.split(",")],
     )
 CORS_ALLOW_CREDENTIALS = True
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.exceptions.custom_exception_handler",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "FlavorMap API",
+    "DESCRIPTION": (
+        "Restaurant review and discovery platform — discover restaurants, "
+        "write reviews, rate experiences, and manage favorites."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "REDOC_UI_SETTINGS": {
+        "theme": {
+            "colors": {
+                "primary": {"main": "#4A74E8"},
+            },
+            "typography": {
+                "fontFamily": "Inter, sans-serif",
+                "headings": {"fontFamily": "Inter, sans-serif"},
+            },
+        },
+    },
+    "COMPONENT_SPLIT_PATCH": True,
+    "COMPONENT_SPLIT_REQUEST": True,
+}

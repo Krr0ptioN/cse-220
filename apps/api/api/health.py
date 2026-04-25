@@ -2,25 +2,21 @@
 
 from datetime import datetime, timezone
 
-from api_http import Controller, controller, get
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from api.services import HealthService
 
 START_TIME = datetime.now(timezone.utc)
 
 
-@controller()
-class HealthController(Controller):
-    """Controller for health endpoint."""
+class HealthController(APIView):
+    """Controller for the health endpoint."""
 
-    @get()
-    def health(self):
-        """Return API health status as JSON."""
-        now = datetime.now(timezone.utc)
-        uptime_seconds = int((now - START_TIME).total_seconds())
-        return self.json(
-            {
-                "status": "ok",
-                "version": "1.0.0",
-                "service": "flavormap-api",
-                "uptime_seconds": uptime_seconds,
-            }
-        )
+    service_class = HealthService
+
+    def get_service(self) -> HealthService:
+        return self.service_class(start_time=START_TIME)
+
+    def get(self, request):
+        return Response(self.get_service().health())

@@ -127,6 +127,26 @@ def test_restaurant_delete_success_by_admin():
         admin.delete()
 
 
+def test_restaurant_delete_session_auth_requires_csrf_when_enforced():
+    """Session-authenticated unsafe requests still enforce CSRF protection."""
+    client = Client(enforce_csrf_checks=True)
+    admin = _create_user(role=UserRole.ADMIN)
+    restaurant = _create_restaurant()
+
+    try:
+        client.force_login(admin)
+        response = client.delete(f"/api/v1/restaurants/{restaurant.slug}/")
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+        assert "CSRF" in response.json()["error"]["message"]
+        assert Restaurant.objects.filter(slug=restaurant.slug).exists()
+    finally:
+        restaurant.delete()
+        restaurant.category.delete()
+        admin.delete()
+
+
 def test_restaurant_delete_not_found():
     """DELETE /restaurants/{slug}/ returns 404 for non-existent slug."""
     client = Client()

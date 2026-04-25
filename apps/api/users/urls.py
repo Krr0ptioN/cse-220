@@ -1,7 +1,9 @@
 """URL routes for users app."""
 
-from api_http import build_urlpatterns
+from django.urls import path
 
 from users.views import UsersController
 
-urlpatterns = build_urlpatterns(UsersController)
+urlpatterns = [
+    path("me/", UsersController.as_view(), name="users-me"),
+]

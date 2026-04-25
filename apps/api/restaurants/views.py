@@ -1,130 +1,153 @@
 """Views for restaurant endpoints."""
 
-from api_http import (
-    Controller,
-    UserIsAuthenticated,
-    UserRoleRequired,
-    controller,
-    delete,
-    get,
-    guard,
-    patch,
-    post,
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from api.rest import (
+    api_data,
+    api_paginated,
+    paginate_queryset,
+    parse_csv_param,
+    require_authenticated_user,
 )
-from restaurants.dtos import RestaurantDto
-from restaurants.models import Restaurant
-from users.models import UserRole
+from restaurants.serializers import (
+    RestaurantSerializer,
+    RestaurantUpdateSerializer,
+    RestaurantWriteSerializer,
+)
+from restaurants.services import RestaurantService
 
-@controller()
-class RestaurantsController(Controller):
-    """Controller for restaurant endpoints."""
 
-    @get()
-    def restaurants_list(self):
-        """Return paginated restaurant results with DTO serialization."""
-        include_fields, omit_fields, with_fields = self.list_query_fields()
-        active_with_fields = self.resolve_list_with_fields(
-            RestaurantDto,
-            include_fields=include_fields,
-            with_fields=with_fields,
-        )
+class RestaurantsController(APIView):
+    """List restaurants or create a new restaurant."""
 
-        queryset = self.apply_list_query_options(
-            Restaurant.objects.all(),
-            dto_class=RestaurantDto,
-            active_with_fields=active_with_fields,
-        )
+    service_class = RestaurantService
 
-        page_obj, pagination = self.paginate_queryset(queryset)
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
 
-        data = RestaurantDto.from_models(
-            page_obj.object_list,
-            include=include_fields or None,
-            omit=omit_fields or None,
-            with_=active_with_fields,
-        )
-
-        return self.json(
-            {
-                "data": data,
-                "pagination": pagination,
-            }
-        )
-
-    @get("<slug:slug>/")
-    def restaurant_detail(self, slug):
-        """Return restaurant detail with full DTO serialization."""
-        restaurant = Restaurant.objects.filter(slug=slug).first()
-        if restaurant is None:
-            return self.error(
-                status=404,
-                code="not_found",
-                message="Restaurant not found.",
-            )
-
-        data = RestaurantDto.from_model(restaurant)
-        return self.json({"data": data})
-
-    @post()
-    @guard(UserIsAuthenticated)
-    @guard(UserRoleRequired(UserRole.OWNER))
-    def restaurant_create(self):
-        """Scaffold for owner-only restaurant creation."""
-        # TODO(implementation guide):
-        # 1) Auth check (skip)
-        # 2) Role check for owners (skip)
-        #
-        # 3) Parse request JSON body and validate required fields.
-        #    - validate at least: name, description, category_id, address_line1, city
-        #    - validate category exists (Category.objects.filter(id=...).first())
-        #    - validate enums like price_range against model choices
-        #
-        # 4) Persist model using Django ORM.
-        #    - restaurant = Restaurant.objects.create(..., owner=user, category=category)
-        #
-        # 5) Serialize and return using new DTO + api_http helper.
-        #    - return self.created({"data": RestaurantDto.from_model(restaurant)})
-        return self.error(
-            status=501,
-            code="not_implemented",
-            message="restaurant_create is scaffolded but not implemented.",
-        )
-
-    @patch("<slug:slug>/")
-    @guard(UserIsAuthenticated)
-    @guard(UserRoleRequired(UserRole.OWNER))
-    def restaurant_update(self, slug):
-        """Scaffold for owner-only restaurant update."""
-        # TODO: (implementation guide)
-        # 1)  auth check (skip)
-        # 2) Load restaurant by slug:
-        #    - restaurant = Restaurant.objects.filter(slug=slug).first()
-        #    - if restaurant is None: return self.error(status=404, code="not_found", message="Restaurant not found.")
-        # 3) Ownership check:
-        #    - if restaurant.owner_id != user.id: return self.error(status=403, code="forbidden", ...)
-        # 4) Parse partial payload, validate allowed fields only, and reject empty patch payload.
-        # 5) Apply validated fields, save model, and serialize with DTO:
-        #    - return self.json({"data": RestaurantDto.from_model(restaurant)})
-        return self.error(
-            status=501,
-            code="not_implemented",
-            message=(
-                f"restaurant_update for slug '{slug}' is scaffolded but not implemented."
+    @extend_schema(
+        summary="List restaurants",
+        description=(
+            "Retrieve a paginated list of restaurants. Supports field filtering and "
+            "relation expansion through query parameters."
+        ),
+        parameters=[
+            OpenApiParameter(
+                "page",
+                OpenApiTypes.INT,
+                description="A page number within the paginated result set.",
             ),
+            OpenApiParameter(
+                "page_size",
+                OpenApiTypes.INT,
+                description="Number of results to return per page.",
+            ),
+            OpenApiParameter(
+                "include",
+                OpenApiTypes.STR,
+                description="Comma-separated list of fields to include in the response.",
+            ),
+            OpenApiParameter(
+                "with",
+                OpenApiTypes.STR,
+                description="Comma-separated list of relations to expand.",
+            ),
+            OpenApiParameter(
+                "omit",
+                OpenApiTypes.STR,
+                description="Comma-separated list of fields to exclude from the response.",
+            ),
+        ],
+        responses={200: RestaurantSerializer(many=True)},
+        tags=["Restaurants"],
+    )
+    def get(self, request):
+        queryset = self.get_service().list_restaurants()
+        page_obj, pagination = paginate_queryset(queryset, request)
+
+        include_fields = parse_csv_param(request.query_params.get("include"))
+        with_fields = parse_csv_param(request.query_params.get("with"))
+        if include_fields:
+            include_fields = [*include_fields, *with_fields]
+
+        include_fields = include_fields or None
+        omit_fields = parse_csv_param(request.query_params.get("omit")) or None
+
+        serializer = RestaurantSerializer(
+            page_obj.object_list,
+            many=True,
+            include=include_fields,
+            omit=omit_fields,
         )
+        return api_paginated(serializer.data, pagination)
 
-    @delete("<slug:slug>/")
-    @guard(UserIsAuthenticated)
-    @guard(UserRoleRequired(UserRole.ADMIN))
-    def restaurant_delete(self, slug):
-        """Scaffold for admin-only restaurant deletion."""
-        restaurant = Restaurant.objects.filter(slug=slug).first()
-        if restaurant is None:
-            return self.error(
-                status=404,
-                code="not_found",
-                message="Restaurant not found.",
-            )
+    @extend_schema(
+        summary="Create restaurant",
+        description="Register a new restaurant spot in the platform. Requires owner role.",
+        request=RestaurantWriteSerializer,
+        responses={201: RestaurantSerializer},
+        tags=["Restaurants"],
+    )
+    def post(self, request):
+        user = require_authenticated_user(request)
+        serializer = RestaurantWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        restaurant = self.get_service().create_restaurant(
+            user=user,
+            data=serializer.validated_data,
+        )
+        return api_data(RestaurantSerializer(restaurant).data, status_code=201)
 
-        restaurant.delete()
-        return self.no_content()
+
+class RestaurantDetailController(APIView):
+    """Retrieve, update, or delete a restaurant."""
+
+    service_class = RestaurantService
+
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
+    @extend_schema(
+        summary="Get restaurant details",
+        description="Retrieve detailed information about a specific restaurant by its unique slug.",
+        responses={200: RestaurantSerializer},
+        tags=["Restaurants"],
+    )
+    def get(self, request, slug):
+        restaurant = self.get_service().get_restaurant(slug)
+        return api_data(RestaurantSerializer(restaurant).data)
+
+    @extend_schema(
+        summary="Update restaurant",
+        description="Modify an existing restaurant's details. Must be the restaurant owner.",
+        request=RestaurantUpdateSerializer,
+        responses={200: RestaurantSerializer},
+        tags=["Restaurants"],
+    )
+    def patch(self, request, slug):
+        service = self.get_service()
+        restaurant = service.get_restaurant(slug)
+        user = require_authenticated_user(request)
+        serializer = RestaurantUpdateSerializer(restaurant, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        restaurant = service.update_restaurant(
+            user=user,
+            restaurant=restaurant,
+            data=serializer.validated_data,
+        )
+        return api_data(RestaurantSerializer(restaurant).data)
+
+    @extend_schema(
+        summary="Delete restaurant",
+        description="Permanently remove a restaurant from the platform. Requires admin role.",
+        responses={204: None},
+        tags=["Restaurants"],
+    )
+    def delete(self, request, slug):
+        service = self.get_service()
+        restaurant = service.get_restaurant(slug)
+        user = require_authenticated_user(request)
+        service.delete_restaurant(user=user, restaurant=restaurant)
+        return Response(status=204)

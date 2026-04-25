@@ -75,10 +75,51 @@ def test_restaurants_list_supports_pagination_and_include_fields():
         assert payload["pagination"]["page"] == 1
         assert payload["pagination"]["page_size"] == 1
         assert payload["pagination"]["total"] >= 1
+        assert "has_next" in payload["pagination"]
+        assert payload["pagination"]["has_previous"] is False
         assert len(payload["data"]) == 1
 
         item = payload["data"][0]
         assert set(item.keys()) == {"name", "city"}
+    finally:
+        restaurant.delete()
+        category.delete()
+        owner.delete()
+
+
+def test_restaurants_list_supports_explicit_relation_expansion():
+    client = Client()
+    suffix = uuid.uuid4().hex[:8]
+    user_model = get_user_model()
+
+    owner = user_model.objects.create_user(
+        email=f"owner-relation-{suffix}@example.com",
+        username=f"owner-relation-{suffix}",
+        password="owner-password-123",
+        display_name="Owner Relation",
+    )
+    category = Category.objects.create(
+        name=f"Relation Category {suffix}",
+        description="Relation expansion category",
+    )
+    restaurant_name = f"Relation Test {suffix}"
+    restaurant = Restaurant.objects.create(
+        name=restaurant_name,
+        description="Desc",
+        category=category,
+        owner=owner,
+        address_line1="A",
+        city="Istanbul",
+        district="Kadikoy",
+    )
+
+    try:
+        response = client.get("/api/v1/restaurants/?include=name&with=category&page_size=10")
+
+        assert response.status_code == 200
+        matching = [item for item in response.json()["data"] if item.get("name") == restaurant_name]
+        assert matching
+        assert matching[0]["category"]["name"] == category.name
     finally:
         restaurant.delete()
         category.delete()
@@ -145,7 +186,8 @@ def test_users_route_requires_authentication():
 
     me_response = client.get("/api/v1/users/me/")
 
-    assert me_response.status_code == 302
+    assert me_response.status_code == 401
+    assert me_response.json()["error"]["code"] == "auth_required"
 
 
 def test_users_authenticated_smoke():

@@ -139,7 +139,7 @@
     }
   },
   "tags": [],
-  "implicitDependencies": ["api-http"],
+  "implicitDependencies": [],
   "release": {
     "version": {
       "versionActions": "@nxlv/python/release/version-actions"

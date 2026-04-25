@@ -1,7 +1,8 @@
-"""URL routes for restaurants app."""
+from django.urls import path
 
-from api_http import build_urlpatterns
+from restaurants.views import RestaurantDetailController, RestaurantsController
 
-from restaurants.views import RestaurantsController
-
-urlpatterns = build_urlpatterns(RestaurantsController)
+urlpatterns = [
+    path("", RestaurantsController.as_view(), name="restaurants-list"),
+    path("<slug:slug>/", RestaurantDetailController.as_view(), name="restaurants-detail"),
+]

@@ -30,14 +30,6 @@ All commands below assume current directory is repository root.
 ./nx run api:test
 ```
 
-## api-http Library Commands
-
-```bash
-./nx run api-http:install
-./nx run api-http:test
-./nx run api-http:build
-```
-
 ## Generic Manage.py Wrapper
 
 Use this when a specific Nx target does not exist yet:
@@ -69,5 +61,4 @@ Examples:
 ## Related Documentation
 
 - `apps/api/README.md`
-- `libs/api-http/README.md`
 - `docs/TECHNICAL_SPECIFICATION.md`

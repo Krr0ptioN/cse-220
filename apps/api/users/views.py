@@ -1,26 +1,19 @@
 """Views for user endpoints."""
 
-from api_http import Controller, controller, get, use
-from django.contrib.auth.decorators import login_required
+from rest_framework.views import APIView
+
+from api.rest import api_data, require_authenticated_user
+from users.services import UserService
 
 
-@controller()
-class UsersController(Controller):
+class UsersController(APIView):
     """Controller for users endpoints."""
 
-    @use(login_required)
-    @get("me/")
-    def me(self):
-        """Return the authenticated user profile."""
-        user = self.request.user
-        return self.json(
-            {
-                "data": {
-                    "id": str(user.id),
-                    "email": user.email,
-                    "username": user.username,
-                    "display_name": user.display_name,
-                    "role": user.role,
-                }
-            }
-        )
+    service_class = UserService
+
+    def get_service(self) -> UserService:
+        return self.service_class()
+
+    def get(self, request):
+        user = require_authenticated_user(request)
+        return api_data(self.get_service().me(user))
