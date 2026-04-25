@@ -1,0 +1,20 @@
+{
+  "name": "@flavor-map/ui-module-discovery",
+  "version": "0.0.1",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js",
+      "default": "./dist/server.js"
+    }
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.4"
+  }
+}

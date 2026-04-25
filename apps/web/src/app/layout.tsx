@@ -1,7 +1,8 @@
-import './global.css';
+import 'ui-common/styles/global.css';
 import { cn, ThemeProvider } from 'ui-common';
+import { Metadata } from 'next';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Flavor Map',
   description: 'Module-oriented Nx frontend baseline with shadcn/ui',
 };

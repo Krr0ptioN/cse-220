@@ -30,4 +30,7 @@ After setup, start the API with:
 
 ```bash
 ./nx run api:runserver
+
+# Windows
+./nx.bat run api:runserver
 ```

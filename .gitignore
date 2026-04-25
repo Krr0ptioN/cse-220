@@ -1,4 +1,3 @@
-
 .nx/installation
 .nx/cache
 .nx/workspace-data
@@ -18,7 +17,7 @@ tmp
 
 # dependencies
 node_modules
- 
+
 # IDEs and editors
 /.idea
 .project
@@ -86,3 +85,7 @@ apps/api/logs/
 /apps/reports/apps/unittests
 /.cache/
 /.coverage
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+
+storybook-static
