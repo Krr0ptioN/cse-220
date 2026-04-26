@@ -34,3 +34,18 @@ After setup, start the API with:
 # Windows
 ./nx.bat run api:runserver
 ```
+
+## Pre-commit
+
+Install pre-commit once on your machine and register project hooks:
+
+```bash
+pipx install pre-commit
+pre-commit install
+```
+
+Run all configured hooks manually:
+
+```bash
+pre-commit run --all-files
+```

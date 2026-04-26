@@ -125,6 +125,7 @@ else:
     is_debug = config("DEBUG", default=False, cast=bool)
 
 if is_debug:
+    ALLOWED_HOSTS = ["*"]
     CORS_ALLOW_ALL_ORIGINS = True
 else:
     CORS_ALLOWED_ORIGINS = config(
@@ -133,6 +134,17 @@ else:
         cast=lambda v: [s.strip() for s in v.split(",")],
     )
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default=(
+        "http://localhost:3000,http://localhost:3001,http://localhost:3050,"
+        "http://localhost:8020,http://127.0.0.1:3000,http://127.0.0.1:3001,"
+        "http://127.0.0.1:3050,http://127.0.0.1:8020,"
+        "http://192.168.1.118:3000,http://192.168.1.118:3001,"
+        "http://192.168.1.118:3050,http://192.168.1.118:8020"
+    ),
+    cast=lambda v: [s.strip() for s in v.split(",")],
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [

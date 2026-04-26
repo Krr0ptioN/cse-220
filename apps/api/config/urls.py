@@ -11,6 +11,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
+from restaurants.views import CategoryListController
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -27,7 +28,9 @@ urlpatterns = [
         name="redoc",
     ),
     path("api/v1/health/", include("api.urls")),
+    path("api/v1/auth/", include("users.auth_urls")),
     path("api/v1/users/", include("users.urls")),
+    path("api/v1/categories/", CategoryListController.as_view(), name="categories-list"),
     path("api/v1/restaurants/", include("restaurants.urls")),
     path("api/v1/reviews/", include("reviews.urls")),
 ]
