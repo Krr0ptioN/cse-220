@@ -38,9 +38,11 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
 
+      - name: CI
+        run: pnpm exec nx affected -t lint test build
 
-      - name: Backend validations
+      - name: Post CI / API validations
         run: |
-          npx nx run api:check
-          npx nx run api:makemigrations-check
-          npx nx run api:test
+          pnpm nx run api:check
+          pnpm nx run api:makemigrations-check
+          pnpm nx run api:test
