@@ -3,6 +3,13 @@
   "$schema": "../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
   "sourceRoot": "apps/api/api",
+  "release": {
+    "version": {
+      "versionActions": "@nxlv/python/release/version-actions"
+    }
+  },
+  "tags": [],
+  "implicitDependencies": [],
   "targets": {
     "lock": {
       "executor": "@nxlv/python:lock",
@@ -136,13 +143,6 @@
         "verbose": false,
         "debug": false
       }
-    }
-  },
-  "tags": [],
-  "implicitDependencies": [],
-  "release": {
-    "version": {
-      "versionActions": "@nxlv/python/release/version-actions"
     }
   }
 }

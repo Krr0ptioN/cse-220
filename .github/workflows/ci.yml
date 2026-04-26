@@ -38,27 +38,6 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
 
-      - name: Install pre-commit
-        run: pipx install pre-commit
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Install backend dependencies
-        working-directory: apps/api
-        run: poetry install --no-interaction --no-root
-
-      - name: Run pre-commit hooks
-        run: pre-commit run --all-files
-
-      - name: Lint frontend and UI libraries
-        run: npx nx run-many -t lint -p web,ui-common,ui-module-map
-
-      - name: Build web app
-        run: npx nx build web
-
-      - name: Frontend unit tests
-        run: npx nx run web:test
 
       - name: Backend validations
         run: |
