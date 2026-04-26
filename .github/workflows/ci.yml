@@ -1,34 +1,35 @@
 name: CI
 
 on:
-  pull_request:
   push:
     branches:
       - main
+  pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  lint-build:
-    name: Lint and Build
+  main:
+    name: Lint, Test, and Build
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # We need to fetch all history so that Nx can calculate affected projects
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
-          run_install: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
+          cache: 'pnpm'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -38,11 +39,38 @@ jobs:
       - name: Install Poetry
         run: pipx install poetry
 
-      - name: CI
-        run: pnpm exec nx affected -t lint test build
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - name: Post CI / API validations
-        run: |
-          pnpm nx run api:check
-          pnpm nx run api:makemigrations-check
-          pnpm nx run api:test
+      - name: Cache Poetry dependencies
+        # Caching poetry dependencies to speed up the python install step
+        uses: actions/cache@v4
+        with:
+          path: .cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Install Python dependencies
+        # This runs the 'install' target for all python projects in the monorepo
+        run: pnpm nx run-many -t install
+
+      - name: Derive appropriate SHAs for Nx calculate affected
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nx-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nx-
+
+      - name: CI
+        # Run all affected targets. Nx will automatically skip projects that don't have these targets.
+        # We include 'check' and 'makemigrations-check' which are specific to the Django API, and 'e2e' for Playwright.
+        run: >
+          pnpm nx affected 
+          -t lint test build check makemigrations-check e2e 
+          --parallel=3
