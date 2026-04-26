@@ -1,6 +1,6 @@
 """Review data access layer."""
 
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Prefetch, Q
 
 from restaurants.models import Restaurant
 from reviews.models import Review, ReviewLike
@@ -16,9 +16,34 @@ class ReviewRepository:
         return Restaurant.objects.filter(slug=restaurant_slug).first()
 
     def list_restaurant_reviews(self, restaurant):
+        reply_queryset = (
+            Review.objects.select_related("user", "restaurant")
+            .annotate(
+                like_total=Count(
+                    "reactions",
+                    filter=Q(reactions__is_like=True),
+                ),
+                dislike_total=Count(
+                    "reactions",
+                    filter=Q(reactions__is_like=False),
+                ),
+            )
+            .order_by("created_at")
+        )
         return (
             Review.objects.filter(restaurant=restaurant, parent__isnull=True)
-            .select_related("user")
+            .select_related("user", "restaurant")
+            .prefetch_related(Prefetch("replies", queryset=reply_queryset))
+            .annotate(
+                like_total=Count(
+                    "reactions",
+                    filter=Q(reactions__is_like=True),
+                ),
+                dislike_total=Count(
+                    "reactions",
+                    filter=Q(reactions__is_like=False),
+                ),
+            )
             .order_by("-created_at")
         )
 

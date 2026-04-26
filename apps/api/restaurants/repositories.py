@@ -1,6 +1,6 @@
 """Restaurant data access layer."""
 
-from restaurants.models import Restaurant
+from restaurants.models import Category, Restaurant
 
 
 class RestaurantRepository:
@@ -8,6 +8,12 @@ class RestaurantRepository:
 
     def list_restaurants(self):
         return Restaurant.objects.select_related("category").all()
+
+    def list_categories(self):
+        return Category.objects.all()
+
+    def list_by_owner(self, owner):
+        return Restaurant.objects.select_related("category").filter(owner=owner)
 
     def get_by_slug(self, slug: str):
         return Restaurant.objects.select_related("category", "owner").filter(slug=slug).first()

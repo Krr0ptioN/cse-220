@@ -16,6 +16,18 @@ class RestaurantService:
     def list_restaurants(self):
         return self.repository.list_restaurants()
 
+    def list_categories(self):
+        return self.repository.list_categories()
+
+    def list_owned_restaurants(self, user):
+        if user.role != UserRole.OWNER:
+            raise ApiError(
+                status_code=403,
+                code="forbidden",
+                detail="You do not have permission to manage restaurants.",
+            )
+        return self.repository.list_by_owner(user)
+
     def get_restaurant(self, slug: str):
         restaurant = self.repository.get_by_slug(slug)
         if restaurant is None:

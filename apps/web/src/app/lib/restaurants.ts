@@ -1,3 +1,5 @@
+import { env } from './env';
+
 export type RestaurantCategory = {
   id?: string;
   name?: string;
@@ -20,6 +22,14 @@ export type Restaurant = {
   category?: RestaurantCategory;
 };
 
+export type User = {
+  id: string;
+  email: string;
+  username: string;
+  display_name?: string;
+  role: 'user' | 'owner' | 'admin';
+};
+
 export type PaginationMeta = {
   page: number;
   page_size: number;
@@ -38,24 +48,50 @@ export function getApiBaseUrl(): string {
   const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   if (configuredBaseUrl && configuredBaseUrl.trim()) {
-    return configuredBaseUrl.replace(/\/$/, '');
+    return normalizeClientApiBaseUrl(configuredBaseUrl.replace(/\/$/, ''));
   }
 
-  return 'http://127.0.0.1:8000';
+  return normalizeClientApiBaseUrl(env.apiBaseUrl);
+}
+
+function normalizeClientApiBaseUrl(baseUrl: string): string {
+  if (typeof window === 'undefined') {
+    return baseUrl;
+  }
+
+  const browserHost = window.location.hostname;
+  if (browserHost === 'localhost' || browserHost === '127.0.0.1') {
+    return baseUrl;
+  }
+
+  try {
+    const url = new URL(baseUrl);
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      url.hostname = browserHost;
+      return url.toString().replace(/\/$/, '');
+    }
+  } catch {
+    return baseUrl;
+  }
+
+  return baseUrl;
 }
 
 export const API_ENDPOINTS = {
   restaurants: {
     list: () => `${getApiBaseUrl()}/api/v1/restaurants/`,
+    mine: () => `${getApiBaseUrl()}/api/v1/restaurants/mine/`,
     detail: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
     create: () => `${getApiBaseUrl()}/api/v1/restaurants/`,
     update: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
     delete: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
   },
   auth: {
-    register: () => `${getApiBaseUrl()}/api/v1/auth/register`,
-    login: () => `${getApiBaseUrl()}/api/v1/auth/login`,
-    me: () => `${getApiBaseUrl()}/api/v1/auth/me`,
+    csrf: () => `${getApiBaseUrl()}/api/v1/auth/csrf/`,
+    register: () => `${getApiBaseUrl()}/api/v1/auth/register/`,
+    login: () => `${getApiBaseUrl()}/api/v1/auth/login/`,
+    logout: () => `${getApiBaseUrl()}/api/v1/auth/logout/`,
+    me: () => `${getApiBaseUrl()}/api/v1/auth/me/`,
   },
   reviews: {
     list: (restaurantSlug: string) =>

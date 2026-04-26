@@ -60,6 +60,67 @@ def test_restaurant_list_no_auth_required():
     assert "data" in response.json()
 
 
+def test_category_list_no_auth_required():
+    """GET /categories/ returns categories for restaurant creation forms."""
+    client = Client()
+    first = _create_category()
+    second = _create_category()
+
+    try:
+        response = client.get("/api/v1/categories/")
+
+        assert response.status_code == 200
+        names = [item["name"] for item in response.json()["data"]]
+        assert first.name in names
+        assert second.name in names
+    finally:
+        first.delete()
+        second.delete()
+
+
+def test_restaurant_mine_requires_owner_role():
+    """GET /restaurants/mine/ is only for restaurant owners."""
+    client = Client()
+    user = _create_user(role=UserRole.USER)
+
+    try:
+        client.force_login(user)
+        response = client.get("/api/v1/restaurants/mine/")
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+    finally:
+        user.delete()
+
+
+def test_restaurant_mine_returns_only_owned_restaurants():
+    """Owners can fetch only their own restaurants for the dashboard."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    other_owner = _create_user(role=UserRole.OWNER)
+    owned = _create_restaurant(owner=owner)
+    other = _create_restaurant(owner=other_owner)
+
+    try:
+        client.force_login(owner)
+        response = client.get("/api/v1/restaurants/mine/")
+
+        assert response.status_code == 200
+        payload = response.json()
+        slugs = [item["slug"] for item in payload["data"]]
+        assert owned.slug in slugs
+        assert other.slug not in slugs
+    finally:
+        owned_category = owned.category
+        other_category = other.category
+        owned.delete()
+        other.delete()
+        owned_category.delete()
+        other_category.delete()
+        owner.delete()
+        other_owner.delete()
+
+
 def test_restaurant_detail_no_auth_required():
     """GET /restaurants/{slug}/ should not require authentication."""
     client = Client()

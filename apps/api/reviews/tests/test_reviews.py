@@ -116,6 +116,91 @@ def test_restaurant_reviews_returns_paginated_list():
     assert payload["pagination"]["total"] == 3
 
 
+def test_restaurant_scoped_review_route_returns_thread_contract():
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant = _create_restaurant(owner=owner)
+    reviewer = _create_user()
+    commenter = _create_user()
+    review = _create_review(
+        restaurant=restaurant,
+        user=reviewer,
+        rating=5,
+        content="The lamb was excellent and the staff were attentive.",
+    )
+    comment = _create_review(
+        restaurant=restaurant,
+        user=commenter,
+        rating=4,
+        content="I had a similar experience with the staff.",
+        parent=review,
+    )
+    owner_answer = _create_review(
+        restaurant=restaurant,
+        user=owner,
+        rating=5,
+        content="Thank you for visiting. We hope to host you again soon.",
+        parent=review,
+    )
+    ReviewLike.objects.create(review=review, user=commenter, is_like=True)
+    ReviewLike.objects.create(review=review, user=owner, is_like=False)
+
+    response = client.get(
+        f"/api/v1/restaurants/{restaurant.slug}/reviews/?page=1&page_size=1"
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["pagination"] == {
+        "page": 1,
+        "page_size": 1,
+        "total": 1,
+        "total_pages": 1,
+        "has_next": False,
+        "has_previous": False,
+    }
+
+    thread = payload["data"][0]
+    assert thread["id"] == str(review.id)
+    assert thread["parent_id"] is None
+    assert thread["is_business_answer"] is False
+    assert thread["like_count"] == 1
+    assert thread["dislike_count"] == 1
+    assert [reply["id"] for reply in thread["replies"]] == [
+        str(comment.id),
+        str(owner_answer.id),
+    ]
+    assert thread["replies"][0]["parent_id"] == str(review.id)
+    assert thread["replies"][0]["is_business_answer"] is False
+    assert thread["replies"][1]["parent_id"] == str(review.id)
+    assert thread["replies"][1]["is_business_answer"] is True
+
+
+def test_restaurant_scoped_review_route_limits_threads_to_one_reply_level():
+    client = Client()
+    restaurant = _create_restaurant()
+    review = _create_review(restaurant=restaurant)
+    reply = _create_review(
+        restaurant=restaurant,
+        content="This is a first-level comment for the review.",
+        parent=review,
+    )
+    _create_review(
+        restaurant=restaurant,
+        content="This nested reply should not be serialized in the thread.",
+        parent=reply,
+    )
+
+    response = client.get(f"/api/v1/restaurants/{restaurant.slug}/reviews/")
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert len(data) == 1
+    assert len(data[0]["replies"]) == 1
+    assert data[0]["replies"][0]["id"] == str(reply.id)
+    assert "replies" not in data[0]["replies"][0]
+
+
 def test_restaurant_reviews_excludes_replies():
     client = Client()
     restaurant = _create_restaurant()

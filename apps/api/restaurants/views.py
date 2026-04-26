@@ -12,6 +12,7 @@ from api.rest import (
     require_authenticated_user,
 )
 from restaurants.serializers import (
+    CategorySerializer,
     RestaurantSerializer,
     RestaurantUpdateSerializer,
     RestaurantWriteSerializer,
@@ -99,6 +100,33 @@ class RestaurantsController(APIView):
             data=serializer.validated_data,
         )
         return api_data(RestaurantSerializer(restaurant).data, status_code=201)
+
+
+class CategoryListController(APIView):
+    """List categories for restaurant forms."""
+
+    service_class = RestaurantService
+
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
+    def get(self, request):
+        categories = self.get_service().list_categories()
+        return api_data(CategorySerializer(categories, many=True).data)
+
+
+class OwnerRestaurantsController(APIView):
+    """List restaurants owned by the current restaurant manager."""
+
+    service_class = RestaurantService
+
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
+    def get(self, request):
+        user = require_authenticated_user(request)
+        restaurants = self.get_service().list_owned_restaurants(user)
+        return api_data(RestaurantSerializer(restaurants, many=True).data)
 
 
 class RestaurantDetailController(APIView):
