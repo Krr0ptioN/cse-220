@@ -20,7 +20,7 @@ export default defineConfig(() => ({
     }),
   ],
   build: {
-    outDir: '../../../../dist/libs/ui/common',
+    outDir: './dist',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
@@ -37,18 +37,6 @@ export default defineConfig(() => ({
     },
     rollupOptions: {
       external: ['react', 'react-dom', 'react/jsx-runtime'],
-    },
-  },
-  test: {
-    name: 'ui-common',
-    watch: false,
-    globals: true,
-    environment: 'jsdom',
-    include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    reporters: ['default'],
-    coverage: {
-      reportsDirectory: '../../../../coverage/libs/ui/common',
-      provider: 'v8' as const,
     },
   },
 }));

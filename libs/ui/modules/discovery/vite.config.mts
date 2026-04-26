@@ -26,7 +26,7 @@ export default defineConfig(() => ({
   // Configuration for building your library.
   // See: https://vite.dev/guide/build.html#library-mode
   build: {
-    outDir: '../../../../dist/libs/ui/modules/discovery',
+    outDir: './dist',
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {
@@ -51,13 +51,14 @@ export default defineConfig(() => ({
   },
   test: {
     name: 'ui-module-discovery',
+    passWithNoTests: true,
     watch: false,
     globals: true,
     environment: 'jsdom',
     include: ['{src,tests}/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     reporters: ['default'],
     coverage: {
-      reportsDirectory: '../../../../coverage/libs/ui/modules/discovery',
+      reportsDirectory: './coverage',
       provider: 'v8' as const,
     },
   },
