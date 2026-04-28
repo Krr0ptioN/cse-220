@@ -42,6 +42,13 @@
       },
       "cache": true
     },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "poetry run ruff check .",
+        "cwd": "{projectRoot}"
+      }
+    },
     "test": {
       "executor": "@nxlv/python:run-commands",
       "outputs": [
