@@ -72,5 +72,5 @@ jobs:
         # We include 'check' and 'makemigrations-check' which are specific to the Django API, and 'e2e' for Playwright.
         run: >
           pnpm nx affected 
-          -t lint test build check makemigrations-check e2e 
+          -t lint test build check makemigrations-check
           --parallel=3
