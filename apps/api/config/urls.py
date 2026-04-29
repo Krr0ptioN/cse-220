@@ -33,6 +33,7 @@ urlpatterns = [
     path("api/v1/categories/", CategoryListController.as_view(), name="categories-list"),
     path("api/v1/restaurants/", include("restaurants.urls")),
     path("api/v1/reviews/", include("reviews.urls")),
+    path("api/v1/files/", include("files.urls")),
 ]
 
 # Serve media files in development
