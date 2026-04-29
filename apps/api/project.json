@@ -56,7 +56,7 @@
         "{workspaceRoot}/coverage/{projectRoot}"
       ],
       "options": {
-        "command": "poetry run pytest tests/",
+        "command": "poetry run pytest",
         "cwd": "{projectRoot}"
       },
       "cache": true
