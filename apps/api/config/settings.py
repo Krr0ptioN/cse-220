@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "users",
     "restaurants",
     "reviews",
+    "files",
 ]
 
 MIDDLEWARE = [
@@ -110,6 +111,28 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#media
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Object file storage
+FILE_STORAGE_BACKEND = config("FILE_STORAGE_BACKEND", default="local")
+FILE_STORAGE_LOCAL_ROOT = config("FILE_STORAGE_LOCAL_ROOT", default=str(MEDIA_ROOT))
+FILE_STORAGE_LOCAL_URL = config("FILE_STORAGE_LOCAL_URL", default=MEDIA_URL)
+FILE_STORAGE_MAX_SIZE = config("FILE_STORAGE_MAX_SIZE", default=5 * 1024 * 1024, cast=int)
+FILE_STORAGE_MAX_IMAGE_PIXELS = config(
+    "FILE_STORAGE_MAX_IMAGE_PIXELS",
+    default=20_000_000,
+    cast=int,
+)
+FILE_STORAGE_THUMBNAIL_SIZES = config(
+    "FILE_STORAGE_THUMBNAIL_SIZES",
+    default="64,128,256",
+    cast=lambda v: tuple(int(size.strip()) for size in v.split(",") if size.strip()),
+)
+
+MINIO_ENDPOINT = config("MINIO_ENDPOINT", default="localhost:9000")
+MINIO_ACCESS_KEY = config("MINIO_ACCESS_KEY", default="minioadmin")
+MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="minioadmin")
+MINIO_BUCKET_NAME = config("MINIO_BUCKET_NAME", default="uploads")
+MINIO_SECURE = config("MINIO_SECURE", default=False, cast=bool)
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

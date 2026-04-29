@@ -37,4 +37,10 @@ urlpatterns = [
 
 # Serve media files in development
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    if settings.FILE_STORAGE_BACKEND.lower() == "local":
+        urlpatterns += static(
+            settings.FILE_STORAGE_LOCAL_URL,
+            document_root=settings.FILE_STORAGE_LOCAL_ROOT,
+        )
+    else:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

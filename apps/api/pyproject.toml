@@ -36,6 +36,7 @@ readme = 'README.md'
   python-decouple = "^3.8"  # For environment variables
   djangorestframework = "^3.17.1"
   drf-spectacular = "^0.29.0"
+  minio = "^7.2.12"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.3.1"
