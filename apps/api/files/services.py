@@ -4,26 +4,35 @@ from __future__ import annotations
 
 import io
 from pathlib import PurePosixPath
+from uuid import UUID
 
 from django.conf import settings
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import FileSystemStorage
 from PIL import Image
 
+from files.repositories import FileRepository
 from files.storage import (
     DEFAULT_MAX_FILE_SIZE,
     DEFAULT_MAX_IMAGE_PIXELS,
     FileStorage,
     LocalFileStorage,
     MinioStorage,
-    StoredFile,
+    StoredFile as StorageResult,
     StoredFileThumbnail,
 )
 
 
 class FileService:
-    def __init__(self, *, storage: FileStorage, thumbnail_sizes: tuple[int, ...] = (64, 128, 256)) -> None:
+    def __init__(
+        self, 
+        *, 
+        storage: FileStorage, 
+        repository: FileRepository | None = None,
+        thumbnail_sizes: tuple[int, ...] = (64, 128, 256)
+    ) -> None:
         self.storage = storage
+        self.repository = repository or FileRepository()
         self.thumbnail_sizes = thumbnail_sizes
 
     def save(
@@ -34,15 +43,26 @@ class FileService:
         entity_id: str,
         content_type: str,
         generate_thumbnails: bool = False,
-    ) -> StoredFile:
+    ) -> tuple[UUID, StorageResult]:
+        """Saves a file to storage and creates a database record."""
         stored = self.storage.save(
             file,
             category=category,
             entity_id=entity_id,
             content_type=content_type,
         )
+        
+        # Create database record
+        record = self.repository.create(
+            path=stored.path,
+            category=category,
+            entity_id=entity_id,
+            content_type=content_type,
+            size=getattr(file, "size", None),
+        )
+
         if not generate_thumbnails:
-            return stored
+            return record.id, stored
 
         try:
             thumbnails = self._generate_thumbnails(
@@ -51,24 +71,42 @@ class FileService:
                 content_type=content_type,
             )
         except Exception:
-            self.delete(stored.path)
+            self.delete_by_id(record.id)
             raise
-        return StoredFile(
+            
+        return record.id, StorageResult(
             path=stored.path,
             url=stored.url,
             content_type=stored.content_type,
             thumbnails=thumbnails,
         )
 
-    def delete(self, path: str) -> None:
+    def delete_by_id(self, file_id: str | UUID) -> None:
+        """Deletes file from storage and removes database record."""
+        record = self.repository.get_by_id(file_id)
+        if record:
+            self.delete_path(record.path)
+            self.repository.delete(file_id)
+
+    def delete_path(self, path: str) -> None:
+        """Deletes file and its thumbnails from storage."""
         self.storage.delete(path)
         parent = PurePosixPath(path).parent
         stem = PurePosixPath(path).stem
         for size in self.thumbnail_sizes:
             self.storage.delete(str(PurePosixPath(parent, "thumbnails", f"{stem}_{size}.jpg")))
 
-    def get_url(self, path: str) -> str:
-        return self.storage.get_url(path)
+    def get_url_by_id(self, file_id: str | UUID) -> str | None:
+        """Resolves a file ID to a public storage URL."""
+        record = self.repository.get_by_id(file_id)
+        if record:
+            return self.storage.get_url(record.path)
+        return None
+
+    def get_obfuscated_url(self, file_id: str | UUID) -> str:
+        """Returns a stable API URL that hides the internal storage path."""
+        from django.urls import reverse
+        return reverse("files:serve-file", kwargs={"file_id": file_id})
 
     def exists(self, path: str) -> bool:
         return self.storage.exists(path)
@@ -125,6 +163,7 @@ class FileService:
 def create_file_service() -> FileService:
     backend = getattr(settings, "FILE_STORAGE_BACKEND", "local").lower()
     thumbnail_sizes = tuple(getattr(settings, "FILE_STORAGE_THUMBNAIL_SIZES", (64, 128, 256)))
+    repository = FileRepository()
 
     if backend == "local":
         storage = LocalFileStorage(
@@ -139,7 +178,7 @@ def create_file_service() -> FileService:
                 DEFAULT_MAX_IMAGE_PIXELS,
             ),
         )
-        return FileService(storage=storage, thumbnail_sizes=thumbnail_sizes)
+        return FileService(storage=storage, repository=repository, thumbnail_sizes=thumbnail_sizes)
 
     if backend == "minio":
         from minio import Minio
@@ -159,6 +198,6 @@ def create_file_service() -> FileService:
                 DEFAULT_MAX_IMAGE_PIXELS,
             ),
         )
-        return FileService(storage=storage, thumbnail_sizes=thumbnail_sizes)
+        return FileService(storage=storage, repository=repository, thumbnail_sizes=thumbnail_sizes)
 
     raise ValueError(f"Unknown FILE_STORAGE_BACKEND: {backend}")
