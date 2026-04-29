@@ -113,6 +113,7 @@ def test_local_storage_rejects_invalid_image_bytes(tmp_path):
     assert not any(tmp_path.rglob("*.png"))
 
 
+@pytest.mark.django_db
 def test_file_service_generates_thumbnails_for_local_images(tmp_path):
     storage = LocalFileStorage(
         storage=FileSystemStorage(location=tmp_path, base_url="/media/"),
@@ -121,7 +122,7 @@ def test_file_service_generates_thumbnails_for_local_images(tmp_path):
     )
     service = FileService(storage=storage, thumbnail_sizes=(64, 128, 256))
 
-    stored = service.save(
+    file_id, stored = service.save(
         _image_file(),
         category="restaurants",
         entity_id="restaurant-1",
@@ -136,6 +137,7 @@ def test_file_service_generates_thumbnails_for_local_images(tmp_path):
             assert image.size == (thumb.size, thumb.size)
 
 
+@pytest.mark.django_db
 def test_file_service_delete_removes_thumbnail_derivatives(tmp_path):
     storage = LocalFileStorage(
         storage=FileSystemStorage(location=tmp_path, base_url="/media/"),
@@ -143,7 +145,7 @@ def test_file_service_delete_removes_thumbnail_derivatives(tmp_path):
         uuid_factory=lambda: "file-id",
     )
     service = FileService(storage=storage, thumbnail_sizes=(64, 128, 256))
-    stored = service.save(
+    file_id, stored = service.save(
         _image_file(),
         category="restaurants",
         entity_id="restaurant-1",
@@ -151,13 +153,14 @@ def test_file_service_delete_removes_thumbnail_derivatives(tmp_path):
         generate_thumbnails=True,
     )
 
-    service.delete(stored.path)
+    service.delete_by_id(file_id)
 
     assert not (tmp_path / stored.path).exists()
     for thumb in stored.thumbnails:
         assert not (tmp_path / thumb.path).exists()
 
 
+@pytest.mark.django_db
 def test_file_service_cleans_original_when_thumbnail_generation_fails(tmp_path):
     storage = LocalFileStorage(
         storage=FileSystemStorage(location=tmp_path, base_url="/media/"),
@@ -262,6 +265,7 @@ def test_minio_exists_propagates_operational_errors():
         storage.exists("avatars/user-123/2026/04/29/file-id.png")
 
 
+@pytest.mark.django_db
 def test_file_service_can_be_created_from_settings(tmp_path):
     with override_settings(
         FILE_STORAGE_BACKEND="local",
@@ -270,7 +274,7 @@ def test_file_service_can_be_created_from_settings(tmp_path):
     ):
         service = create_file_service()
 
-    stored = service.save(
+    file_id, stored = service.save(
         _image_file(),
         category="avatars",
         entity_id="user-123",

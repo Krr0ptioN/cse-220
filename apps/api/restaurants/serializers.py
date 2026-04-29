@@ -4,20 +4,29 @@ from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
 from restaurants.models import Category, Restaurant
+from files.services import create_file_service
 
 
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
+    
+    icon_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ["id", "name", "slug", "description", "icon_url", "sort_order"]
+        fields = ["id", "name", "slug", "description", "icon", "icon_url", "sort_order"]
+
+    def get_icon_url(self, obj) -> str | None:
+        if not obj.icon_id:
+            return None
+        return create_file_service().get_obfuscated_url(obj.icon_id)
 
 
 class RestaurantSerializer(DynamicFieldsModelSerializer):
     """Restaurant read serializer."""
 
     category = CategorySerializer(read_only=True)
+    logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
@@ -29,6 +38,8 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "phone",
             "website",
             "category",
+            "logo",
+            "logo_url",
             "address_line1",
             "address_line2",
             "city",
@@ -42,6 +53,11 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_logo_url(self, obj) -> str | None:
+        if not obj.logo_id:
+            return None
+        return create_file_service().get_obfuscated_url(obj.logo_id)
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
@@ -61,6 +77,7 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "phone",
             "website",
             "category_id",
+            "logo",
             "address_line1",
             "address_line2",
             "city",
@@ -95,4 +112,5 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "latitude": {"required": False},
             "longitude": {"required": False},
             "price_range": {"required": False},
+            "logo": {"required": False},
         }
