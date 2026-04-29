@@ -34,7 +34,13 @@ class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True)
     description = models.TextField(blank=True)
-    icon_url = models.URLField(blank=True)
+    icon = models.ForeignKey(
+        "files.StoredFile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="categories",
+    )
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
@@ -70,6 +76,13 @@ class Restaurant(models.Model):
         null=True,
         blank=True,
         related_name="owned_restaurants",
+    )
+    logo = models.ForeignKey(
+        "files.StoredFile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="restaurant_logos",
     )
 
     address_line1 = models.CharField(max_length=255)
@@ -134,6 +147,13 @@ class MenuItem(models.Model):
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="EUR")
+    image = models.ForeignKey(
+        "files.StoredFile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="menu_item_images",
+    )
     is_available = models.BooleanField(default=True)
     sort_order = models.PositiveIntegerField(default=0)
 
