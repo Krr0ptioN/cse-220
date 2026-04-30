@@ -1,6 +1,6 @@
 """Views for restaurant endpoints."""
 
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -8,7 +8,6 @@ from api.rest import (
     api_data,
     api_paginated,
     paginate_queryset,
-    parse_csv_param,
     require_authenticated_user,
 )
 from restaurants.serializers import (
@@ -18,7 +17,6 @@ from restaurants.serializers import (
     RestaurantWriteSerializer,
     MenuItemSerializer,
     OpeningHourSerializer,
-    FavoriteSerializer,
 )
 from restaurants.services import RestaurantService
 
@@ -68,7 +66,8 @@ class OwnerRestaurantsController(APIView):
 
     def get(self, request):
         user = require_authenticated_user(request)
-        queryset = self.get_service().list_owner_restaurants(user)
+        # Service method name corrected to list_owned_restaurants
+        queryset = self.get_service().list_owned_restaurants(user)
         return api_data(RestaurantSerializer(queryset, many=True).data)
 
 
@@ -76,7 +75,11 @@ class CategoryListController(APIView):
     """List categories for restaurant forms."""
     service_class = RestaurantService
 
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
     def get(self, request):
+        # Added missing get_service() call
         categories = self.get_service().list_categories()
         return api_data(CategorySerializer(categories, many=True).data)
 
@@ -113,8 +116,11 @@ class RestaurantOpeningHoursController(APIView):
     """List or update opening hours for a restaurant."""
     service_class = RestaurantService
 
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
     def get(self, request, slug):
-        restaurant = self.service_class().get_restaurant(slug)
+        restaurant = self.get_service().get_restaurant(slug)
         opening_hours = restaurant.opening_hours.all()
         return api_data(OpeningHourSerializer(opening_hours, many=True).data)
 
@@ -123,8 +129,11 @@ class RestaurantMenuItemsController(APIView):
     """List menu items for a restaurant."""
     service_class = RestaurantService
 
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
     def get(self, request, slug):
-        restaurant = self.service_class().get_restaurant(slug)
+        restaurant = self.get_service().get_restaurant(slug)
         menu_items = restaurant.menu_items.all()
         return api_data(MenuItemSerializer(menu_items, many=True).data)
 
@@ -133,9 +142,12 @@ class FavoriteController(APIView):
     """Add or remove a restaurant from favorites."""
     service_class = RestaurantService
 
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
     def post(self, request, slug):
         user = require_authenticated_user(request)
-        self.service_class().get_restaurant(slug)
+        self.get_service().get_restaurant(slug)
         return api_data({"message": "Added to favorites"})
 
     def delete(self, request, slug):
