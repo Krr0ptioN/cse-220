@@ -66,7 +66,6 @@ class OwnerRestaurantsController(APIView):
 
     def get(self, request):
         user = require_authenticated_user(request)
-        # Mardin'in belirttiği isim hatası düzeltildi: list_owned_restaurants
         queryset = self.get_service().list_owned_restaurants(user)
         return api_data(RestaurantSerializer(queryset, many=True).data)
 
@@ -79,7 +78,6 @@ class CategoryListController(APIView):
         return self.service_class()
 
     def get(self, request):
-        # Mardin'in belirttiği eksik get_service() eklendi
         categories = self.get_service().list_categories()
         return api_data(CategorySerializer(categories, many=True).data)
 
