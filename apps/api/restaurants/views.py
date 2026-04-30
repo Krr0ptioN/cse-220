@@ -66,7 +66,7 @@ class OwnerRestaurantsController(APIView):
 
     def get(self, request):
         user = require_authenticated_user(request)
-        # Service method name corrected to list_owned_restaurants
+        # Mardin'in belirttiği isim hatası düzeltildi: list_owned_restaurants
         queryset = self.get_service().list_owned_restaurants(user)
         return api_data(RestaurantSerializer(queryset, many=True).data)
 
@@ -79,7 +79,7 @@ class CategoryListController(APIView):
         return self.service_class()
 
     def get(self, request):
-        # Added missing get_service() call
+        # Mardin'in belirttiği eksik get_service() eklendi
         categories = self.get_service().list_categories()
         return api_data(CategorySerializer(categories, many=True).data)
 
@@ -113,7 +113,7 @@ class RestaurantDetailController(APIView):
 
 
 class RestaurantOpeningHoursController(APIView):
-    """List or update opening hours for a restaurant."""
+    """List opening hours for a restaurant."""
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
