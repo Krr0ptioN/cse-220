@@ -3,7 +3,7 @@
 from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
-from restaurants.models import Category, Restaurant
+from restaurants.models import Category, Restaurant, MenuItem, OpeningHour, Favorite
 from files.services import create_file_service
 
 
@@ -114,3 +114,47 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "price_range": {"required": False},
             "logo": {"required": False},
         }
+
+
+class MenuItemSerializer(serializers.ModelSerializer):
+    """Restaurant menu item serializer."""
+    
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            "id",
+            "name",
+            "description",
+            "price",
+            "currency",
+            "image",
+            "image_url",
+            "is_available",
+            "sort_order",
+        ]
+
+    def get_image_url(self, obj) -> str | None:
+        if not obj.image_id:
+            return None
+        return create_file_service().get_obfuscated_url(obj.image_id)
+
+
+class OpeningHourSerializer(serializers.ModelSerializer):
+    """Restaurant opening hour serializer."""
+
+    day_display = serializers.CharField(source="get_day_of_week_display", read_only=True)
+
+    class Meta:
+        model = OpeningHour
+        fields = ["id", "day_of_week", "day_display", "open_time", "close_time", "is_closed"]
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    """User favorite serializer."""
+
+    class Meta:
+        model = Favorite
+        fields = ["id", "restaurant", "created_at"]
+        read_only_fields = ["id", "created_at"]
