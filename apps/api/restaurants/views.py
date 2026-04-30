@@ -59,6 +59,19 @@ class RestaurantsController(APIView):
         return api_data(RestaurantSerializer(restaurant).data, status_code=201)
 
 
+class OwnerRestaurantsController(APIView):
+    """List restaurants owned by the current user."""
+    service_class = RestaurantService
+
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
+    def get(self, request):
+        user = require_authenticated_user(request)
+        queryset = self.get_service().list_owner_restaurants(user)
+        return api_data(RestaurantSerializer(queryset, many=True).data)
+
+
 class CategoryListController(APIView):
     """List categories for restaurant forms."""
     service_class = RestaurantService
