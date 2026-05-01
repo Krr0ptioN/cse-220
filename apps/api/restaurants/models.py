@@ -145,11 +145,6 @@ class MenuItem(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.PROTECT,
-        related_name="menu_items",
-    )
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="EUR")
     image = models.ForeignKey(
