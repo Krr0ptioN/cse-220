@@ -6,10 +6,9 @@ from api.serializers import DynamicFieldsModelSerializer
 from restaurants.models import Category, Restaurant, MenuItem, OpeningHour, Favorite
 from files.services import create_file_service
 
-
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
-    
+
     icon_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -21,6 +20,64 @@ class CategorySerializer(serializers.ModelSerializer):
             return None
         return create_file_service().get_obfuscated_url(obj.icon_id)
 
+
+class MenuItemSerializer(serializers.ModelSerializer):
+    """Restaurant menu item read serializer."""
+
+    restaurant_id = serializers.UUIDField(read_only=True)
+    category = CategorySerializer(read_only=True)
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            "id",
+            "restaurant_id",
+            "name",
+            "description",
+            "category",
+            "price",
+            "currency",
+            "image",
+            "image_url",
+            "is_available",
+            "sort_order",
+        ]
+
+    def get_image_url(self, obj) -> str | None:
+        if not obj.image_id:
+            return None
+        return create_file_service().get_obfuscated_url(obj.image_id)
+
+
+class MenuItemWriteSerializer(serializers.ModelSerializer):
+    """Request serializer for menu item create/update."""
+
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source="category",
+        required=True,
+    )
+    currency = serializers.CharField(max_length=3, required=True)
+    is_available = serializers.BooleanField(required=True)
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            "name",
+            "description",
+            "category_id",
+            "price",
+            "currency",
+            "image",
+            "is_available",
+            "sort_order",
+        ]
+        extra_kwargs = {
+            "description": {"required": False},
+            "image": {"required": False},
+            "sort_order": {"required": False},
+        }
 
 class RestaurantSerializer(DynamicFieldsModelSerializer):
     """Restaurant read serializer."""
@@ -61,7 +118,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
-    """Restaurant create/update serializer."""
+    """Restaurant create serializer."""
 
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),

@@ -1,6 +1,6 @@
 """Restaurant data access layer."""
 
-from restaurants.models import Category, Restaurant
+from restaurants.models import Category, MenuItem, Restaurant
 
 
 class RestaurantRepository:
@@ -29,3 +29,25 @@ class RestaurantRepository:
 
     def delete(self, restaurant: Restaurant) -> None:
         restaurant.delete()
+
+    def list_menu_items(self, restaurant):
+        return MenuItem.objects.filter(restaurant=restaurant).select_related("restaurant", "category", "image")
+
+    def get_menu_item(self, *, restaurant, menu_item_id):
+        return (
+            MenuItem.objects.filter(id=menu_item_id, restaurant=restaurant)
+            .select_related("restaurant", "category", "image")
+            .first()
+        )
+
+    def create_menu_item(self, *, restaurant, data: dict) -> MenuItem:
+        return MenuItem.objects.create(restaurant=restaurant, **data)
+
+    def save_menu_item(self, menu_item: MenuItem, data: dict) -> MenuItem:
+        for field, value in data.items():
+            setattr(menu_item, field, value)
+        menu_item.save()
+        return menu_item
+
+    def delete_menu_item(self, menu_item: MenuItem) -> None:
+        menu_item.delete()

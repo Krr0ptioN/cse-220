@@ -6,7 +6,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
 
-from restaurants.models import Category, Restaurant
+from restaurants.models import Category, MenuItem, Restaurant
 from users.models import UserRole
 
 pytestmark = pytest.mark.django_db
@@ -238,3 +238,172 @@ def test_restaurant_delete_owner_cannot_delete():
         restaurant.delete()
         restaurant.category.delete()
         owner.delete()
+
+
+def test_menu_item_list_no_auth_required():
+    """GET /restaurants/{slug}/menu-items/ exposes menu items for a restaurant."""
+    client = Client()
+    restaurant = _create_restaurant()
+    menu_item = MenuItem.objects.create(
+        restaurant=restaurant,
+        name="Test Burger",
+        description="A test menu item",
+        category=restaurant.category,
+        price="12.50",
+        currency="EUR",
+        is_available=True,
+    )
+
+    try:
+        response = client.get(f"/api/v1/restaurants/{restaurant.slug}/menu-items/")
+
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["data"][0]["id"] == str(menu_item.id)
+        assert payload["data"][0]["name"] == "Test Burger"
+        assert payload["data"][0]["category"]["id"] == str(restaurant.category_id)
+        assert payload["data"][0]["price"] == "12.50"
+    finally:
+        restaurant.delete()
+        restaurant.category.delete()
+        restaurant.owner.delete()
+
+
+def test_menu_item_create_requires_authentication():
+    """POST /restaurants/{slug}/menu-items/ requires a logged-in user."""
+    client = Client()
+    restaurant = _create_restaurant()
+
+    try:
+        response = client.post(
+            f"/api/v1/restaurants/{restaurant.slug}/menu-items/",
+            data={
+                "name": "Soup",
+                "category_id": str(restaurant.category_id),
+                "price": "7.00",
+                "currency": "EUR",
+                "is_available": True,
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "auth_required"
+    finally:
+        restaurant.delete()
+        restaurant.category.delete()
+        restaurant.owner.delete()
+
+
+def test_menu_item_create_update_delete_by_restaurant_owner():
+    """Restaurant owners can create, update, and delete their own menu items."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant = _create_restaurant(owner=owner)
+
+    try:
+        client.force_login(owner)
+        create_response = client.post(
+            f"/api/v1/restaurants/{restaurant.slug}/menu-items/",
+            data={
+                "name": "Lentil Soup",
+                "description": "Warm starter",
+                "category_id": str(restaurant.category_id),
+                "price": "6.50",
+                "currency": "EUR",
+                "is_available": True,
+            },
+            content_type="application/json",
+        )
+
+        assert create_response.status_code == 201
+        created = create_response.json()["data"]
+        assert created["name"] == "Lentil Soup"
+        assert created["category"]["id"] == str(restaurant.category_id)
+
+        menu_item_id = created["id"]
+        patch_response = client.patch(
+            f"/api/v1/restaurants/{restaurant.slug}/menu-items/{menu_item_id}/",
+            data={"price": "7.25", "is_available": False},
+            content_type="application/json",
+        )
+
+        assert patch_response.status_code == 200
+        patched = patch_response.json()["data"]
+        assert patched["price"] == "7.25"
+        assert patched["is_available"] is False
+
+        delete_response = client.delete(
+            f"/api/v1/restaurants/{restaurant.slug}/menu-items/{menu_item_id}/"
+        )
+
+        assert delete_response.status_code == 204
+        assert not MenuItem.objects.filter(id=menu_item_id).exists()
+    finally:
+        restaurant.delete()
+        restaurant.category.delete()
+        owner.delete()
+
+
+def test_menu_item_create_for_other_owner_forbidden():
+    """Owners cannot manage another owner's restaurant menu."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    other_owner = _create_user(role=UserRole.OWNER)
+    restaurant = _create_restaurant(owner=owner)
+
+    try:
+        client.force_login(other_owner)
+        response = client.post(
+            f"/api/v1/restaurants/{restaurant.slug}/menu-items/",
+            data={
+                "name": "Soup",
+                "category_id": str(restaurant.category_id),
+                "price": "7.00",
+                "currency": "EUR",
+                "is_available": True,
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+    finally:
+        restaurant.delete()
+        restaurant.category.delete()
+        owner.delete()
+        other_owner.delete()
+
+
+def test_menu_item_detail_is_scoped_to_restaurant():
+    """Menu item detail routes should not leak items from a different restaurant."""
+    client = Client()
+    first_restaurant = _create_restaurant()
+    second_restaurant = _create_restaurant()
+    menu_item = MenuItem.objects.create(
+        restaurant=first_restaurant,
+        name="Only First Restaurant",
+        category=first_restaurant.category,
+        price="10.00",
+        currency="EUR",
+        is_available=True,
+    )
+
+    try:
+        response = client.get(
+            f"/api/v1/restaurants/{second_restaurant.slug}/menu-items/{menu_item.id}/"
+        )
+
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "not_found"
+    finally:
+        first_owner = first_restaurant.owner
+        second_owner = second_restaurant.owner
+        first_category = first_restaurant.category
+        second_category = second_restaurant.category
+        first_restaurant.delete()
+        second_restaurant.delete()
+        first_category.delete()
+        second_category.delete()
+        first_owner.delete()
+        second_owner.delete()

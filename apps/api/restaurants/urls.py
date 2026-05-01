@@ -7,6 +7,7 @@ from restaurants.views import (
     RestaurantOpeningHoursController,
     RestaurantMenuItemsController,
     FavoriteController
+    RestaurantMenuItemDetailController,
 )
 
 urlpatterns = [
@@ -16,5 +17,20 @@ urlpatterns = [
     path("<slug:slug>/opening-hours/", RestaurantOpeningHoursController.as_view(), name="restaurant-opening-hours"),
     path("<slug:slug>/menu/", RestaurantMenuItemsController.as_view(), name="restaurant-menu-items"),
     path("<slug:slug>/favorite/", FavoriteController.as_view(), name="restaurant-favorite"),
+    path(
+        "<slug:restaurant_slug>/menu-items/",
+        RestaurantMenuItemsController.as_view(),
+        name="restaurants-menu-items",
+    ),
+    path(
+        "<slug:restaurant_slug>/menu-items/<uuid:menu_item_id>/",
+        RestaurantMenuItemDetailController.as_view(),
+        name="restaurants-menu-items-detail",
+    ),
+    path(
+        "<slug:restaurant_slug>/reviews/",
+        RestaurantReviewsController.as_view(),
+        name="restaurants-reviews",
+    ),
     path("<slug:slug>/", RestaurantDetailController.as_view(), name="restaurants-detail"),
 ]
