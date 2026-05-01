@@ -65,10 +65,10 @@ class Restaurant(models.Model):
     phone = models.CharField(max_length=20, blank=True)
     website = models.URLField(blank=True)
 
-    category = models.ForeignKey(
+    categories = models.ManyToManyField(
         Category,
-        on_delete=models.PROTECT,
         related_name="restaurants",
+        blank=True,
     )
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -145,6 +145,11 @@ class MenuItem(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,
+        related_name="menu_items",
+    )
     price = models.DecimalField(max_digits=10, decimal_places=2)
     currency = models.CharField(max_length=3, default="EUR")
     image = models.ForeignKey(

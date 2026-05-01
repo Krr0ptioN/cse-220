@@ -25,14 +25,14 @@ class RestaurantAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "name",
-        "category",
         "city",
         "price_range",
         "average_rating",
         "review_count",
         "created_at",
     )
-    list_filter = ("category", "city", "price_range", "created_at")
+    list_filter = ("categories", "city", "price_range", "created_at")
+    filter_horizontal = ("categories",)
     search_fields = ("name", "slug", "city", "district")
     ordering = ("-created_at",)
 
@@ -41,8 +41,8 @@ class RestaurantAdmin(admin.ModelAdmin):
 class MenuItemAdmin(admin.ModelAdmin):
     """Admin settings for menu items."""
 
-    list_display = ("name", "restaurant", "price", "currency", "is_available")
-    list_filter = ("currency", "is_available")
+    list_display = ("name", "restaurant", "category", "price", "currency", "is_available")
+    list_filter = ("category", "currency", "is_available")
     search_fields = ("name", "restaurant__name")
     ordering = ("restaurant", "sort_order", "name")
 

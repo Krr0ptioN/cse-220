@@ -3,13 +3,13 @@
 from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
-from restaurants.models import Category, Restaurant
 from files.services import create_file_service
+from restaurants.models import Category, MenuItem, Restaurant
 
 
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
-    
+
     icon_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -22,10 +22,68 @@ class CategorySerializer(serializers.ModelSerializer):
         return create_file_service().get_obfuscated_url(obj.icon_id)
 
 
+class MenuItemSerializer(serializers.ModelSerializer):
+    """Restaurant menu item read serializer."""
+
+    restaurant_id = serializers.UUIDField(read_only=True)
+    category = CategorySerializer(read_only=True)
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            "id",
+            "restaurant_id",
+            "name",
+            "description",
+            "category",
+            "price",
+            "currency",
+            "image",
+            "image_url",
+            "is_available",
+            "sort_order",
+        ]
+
+    def get_image_url(self, obj) -> str | None:
+        if not obj.image_id:
+            return None
+        return create_file_service().get_obfuscated_url(obj.image_id)
+
+
+class MenuItemWriteSerializer(serializers.ModelSerializer):
+    """Request serializer for menu item create/update."""
+
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source="category",
+        required=True,
+    )
+    currency = serializers.CharField(max_length=3, required=True)
+    is_available = serializers.BooleanField(required=True)
+
+    class Meta:
+        model = MenuItem
+        fields = [
+            "name",
+            "description",
+            "category_id",
+            "price",
+            "currency",
+            "image",
+            "is_available",
+            "sort_order",
+        ]
+        extra_kwargs = {
+            "description": {"required": False},
+            "image": {"required": False},
+            "sort_order": {"required": False},
+        }
+
 class RestaurantSerializer(DynamicFieldsModelSerializer):
     """Restaurant read serializer."""
 
-    category = CategorySerializer(read_only=True)
+    categories = CategorySerializer(many=True, read_only=True)
     logo_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -37,7 +95,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "description",
             "phone",
             "website",
-            "category",
+            "categories",
             "logo",
             "logo_url",
             "address_line1",
@@ -61,11 +119,12 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
-    """Restaurant create/update serializer."""
+    """Restaurant create serializer."""
 
-    category_id = serializers.PrimaryKeyRelatedField(
+    category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source="category",
+        source="categories",
+        many=True,
         required=True,
     )
 
@@ -76,7 +135,7 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "description",
             "phone",
             "website",
-            "category_id",
+            "category_ids",
             "logo",
             "address_line1",
             "address_line2",
@@ -88,13 +147,20 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "price_range",
         ]
 
+    def create(self, validated_data):
+        categories = validated_data.pop("categories", [])
+        restaurant = Restaurant.objects.create(**validated_data)
+        if categories:
+            restaurant.categories.set(categories)
+        return restaurant
 
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     """Partial update serializer for restaurant edits."""
 
-    category_id = serializers.PrimaryKeyRelatedField(
+    category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source="category",
+        source="categories",
+        many=True,
         required=False,
     )
 
@@ -114,3 +180,12 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "price_range": {"required": False},
             "logo": {"required": False},
         }
+    
+    def update(self, instance, validated_data):
+        categories = validated_data.pop("categories", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if categories is not None:
+            instance.categories.set(categories)
+        return instance
