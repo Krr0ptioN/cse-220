@@ -119,7 +119,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
-    """Restaurant create/update serializer."""
+    """Restaurant create serializer."""
 
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
