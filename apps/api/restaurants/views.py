@@ -144,10 +144,10 @@ class FavoriteController(APIView):
         return self.service_class()
 
     def post(self, request, slug):
-        user = require_authenticated_user(request)
+        require_authenticated_user(request)
         self.get_service().get_restaurant(slug)
         return api_data({"message": "Added to favorites"})
 
     def delete(self, request, slug):
-        user = require_authenticated_user(request)
+        require_authenticated_user(request)
         return Response(status=204)
