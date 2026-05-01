@@ -1,15 +1,17 @@
 import { motion } from 'motion/react';
 import { type KeyboardEvent, type SubmitEvent } from 'react';
-import { useSearchSuggestions } from './use-suggestions.query';
-import { Input } from 'ui-common';
-import { RiSearchLine as Search } from '@remixicon/react';
+import { useSearchSuggestions, type SearchSuggestion } from './use-suggestions.query';
+import { Input, cn } from 'ui-common';
+import { RiMapPinLine, RiRestaurantLine, RiSearchLine as Search, RiSparklingLine, RiTimeLine } from '@remixicon/react';
 
 export interface ExpandedVariationProps {
     handleSubmit: (e: SubmitEvent<HTMLFormElement>) => void,
     query: string,
     setQuery: (s: string) => void,
     handleKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void,
-    placeholder: string
+    placeholder: string,
+    className?: string,
+    expandedClassName?: string,
 }
 
 
@@ -18,31 +20,35 @@ export function ExpandedVariation({
     query,
     setQuery,
     handleKeyDown,
-    placeholder
+    placeholder,
+    className,
+    expandedClassName,
 }: ExpandedVariationProps) {
 
     const { suggestions, isLoading } = useSearchSuggestions({ query });
-    // TOOD: Auto suggestions and search history could be implemented here,
-    // but for now we just want a simple expanding search box
 
     return <motion.form
         key="input"
-        initial={{ width: 220, opacity: 0 }}
-        animate={{ width: 344, opacity: 1 }}
-        exit={{ width: 220, opacity: 0 }}
+        initial={{ opacity: 0, scale: 0.98 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.98 }}
         transition={{
             type: "spring",
             stiffness: 300,
             damping: 30,
         }}
         onSubmit={handleSubmit}
-        className="relative"
+        className={cn("relative w-full", className)}
     >
         <motion.div
             initial={{ backdropFilter: "blur(0px)" }}
             animate={{ backdropFilter: "blur(12px)" }}
-            className="relative flex h-12 items-center overflow-hidden rounded-4xl border border-border bg-card/90 shadow-lg shadow-black/5 backdrop-blur-md transition-shadow focus-within:shadow-xl"
+            className={cn(
+                "relative flex h-12 w-full items-center overflow-hidden rounded-4xl border border-border bg-card/90 shadow-lg shadow-black/5 backdrop-blur-md transition-shadow focus-within:shadow-xl",
+                expandedClassName,
+            )}
         >
+            <Search className="ml-4 h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
                 type="text"
                 value={query}
@@ -50,7 +56,7 @@ export function ExpandedVariation({
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 autoFocus
-                className="h-12 flex-1 border-0 bg-transparent pl-4 pr-12 text-sm shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground" 
+                className="h-12 flex-1 border-0 bg-transparent pl-3 pr-12 text-sm shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground" 
             />
             <motion.button
                 type="submit"
@@ -65,29 +71,78 @@ export function ExpandedVariation({
                 <Search className="h-4 w-4" />
             </motion.button>
         </motion.div>
-        {(query.length && suggestions.length > 0) ? (
-            <QuerySuggestions suggestions={suggestions} />
+        {(query.length || isLoading) ? (
+            <QuerySuggestions
+                isLoading={isLoading}
+                suggestions={suggestions}
+                onSelect={(suggestion) => setQuery(suggestion.label)}
+            />
         ): null}
     </motion.form>;
 }
 
-function QuerySuggestions({ suggestions }: { suggestions: string[] }) {
+function QuerySuggestions({
+    isLoading,
+    suggestions,
+    onSelect,
+}: {
+    isLoading: boolean;
+    suggestions: SearchSuggestion[];
+    onSelect: (suggestion: SearchSuggestion) => void;
+}) {
     return <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
         className="absolute top-full left-0 right-0 mt-2 z-10 
-             rounded-4xl border border-border 
-             bg-card shadow-lg overflow-hidden"
+             overflow-hidden rounded-3xl border border-border 
+             bg-card shadow-xl shadow-black/10"
     >
-        {suggestions.map((suggestion) => (
-            <motion.div
-                key={suggestion}
-                whileHover={{ backgroundColor: "hsl(240, 3.7%, 95.9%)" }}
-                className="px-4 py-2 text-sm text-foreground cursor-pointer"
+        <div className="border-b border-border/70 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                Search suggestions
+            </p>
+        </div>
+        {isLoading ? (
+            <div className="space-y-2 p-4" aria-live="polite">
+                <div className="h-3 w-3/4 animate-pulse rounded-full bg-muted" />
+                <div className="h-3 w-1/2 animate-pulse rounded-full bg-muted" />
+            </div>
+        ) : suggestions.length > 0 ? suggestions.map((suggestion) => (
+            <button
+                type="button"
+                key={`${suggestion.kind}-${suggestion.label}`}
+                onClick={() => onSelect(suggestion)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-foreground transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
             >
-                {suggestion}
-            </motion.div>
-        ))}
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <SuggestionIcon kind={suggestion.kind} />
+                </span>
+                <span className="min-w-0">
+                    <span className="block truncate font-medium">{suggestion.label}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{suggestion.detail}</span>
+                </span>
+            </button>
+        )) : (
+            <div className="px-4 py-4 text-sm text-muted-foreground">
+                No matches yet. Try a cuisine, place, or dish.
+            </div>
+        )}
     </motion.div>;
+}
+
+function SuggestionIcon({ kind }: { kind: SearchSuggestion['kind'] }) {
+    if (kind === 'restaurant') {
+        return <RiRestaurantLine className="size-4" />;
+    }
+
+    if (kind === 'area') {
+        return <RiMapPinLine className="size-4" />;
+    }
+
+    if (kind === 'category') {
+        return <RiSparklingLine className="size-4" />;
+    }
+
+    return <RiTimeLine className="size-4" />;
 }
