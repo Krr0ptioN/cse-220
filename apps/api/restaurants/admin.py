@@ -41,8 +41,8 @@ class RestaurantAdmin(admin.ModelAdmin):
 class MenuItemAdmin(admin.ModelAdmin):
     """Admin settings for menu items."""
 
-    list_display = ("name", "restaurant", "category", "price", "currency", "is_available")
-    list_filter = ("category", "currency", "is_available")
+    list_display = ("name", "restaurant", "price", "currency", "is_available")
+    list_filter = ("currency", "is_available")
     search_fields = ("name", "restaurant__name")
     ordering = ("restaurant", "sort_order", "name")
 

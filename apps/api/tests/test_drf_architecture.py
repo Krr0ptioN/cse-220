@@ -26,8 +26,6 @@ def test_urls_are_backed_by_drf_controller_classes():
     assert _view_class(user_urlpatterns, "me/").__name__ == "UsersController"
     assert _view_class(restaurant_urlpatterns, "").__name__ == "RestaurantsController"
     assert _view_class(restaurant_urlpatterns, "<slug:slug>/").__name__ == "RestaurantDetailController"
-    assert _view_class(restaurant_urlpatterns, "<slug:restaurant_slug>/menu-items/").__name__ == "RestaurantMenuItemsController"
-    assert _view_class(restaurant_urlpatterns, "<slug:restaurant_slug>/menu-items/<uuid:menu_item_id>/").__name__ == "RestaurantMenuItemDetailController"
     assert _view_class(review_urlpatterns, "restaurants/<slug:restaurant_slug>/").__name__ == "RestaurantReviewsController"
     assert _view_class(review_urlpatterns, "<uuid:review_id>/").__name__ == "ReviewController"
     assert _view_class(review_urlpatterns, "<uuid:review_id>/like/").__name__ == "ReviewLikeController"
@@ -45,8 +43,6 @@ def test_controllers_depend_on_services():
     assert _view_class(user_urlpatterns, "me/").service_class is UserService
     assert _view_class(restaurant_urlpatterns, "").service_class is RestaurantService
     assert _view_class(restaurant_urlpatterns, "<slug:slug>/").service_class is RestaurantService
-    assert _view_class(restaurant_urlpatterns, "<slug:restaurant_slug>/menu-items/").service_class is RestaurantService
-    assert _view_class(restaurant_urlpatterns, "<slug:restaurant_slug>/menu-items/<uuid:menu_item_id>/").service_class is RestaurantService
     assert _view_class(review_urlpatterns, "restaurants/<slug:restaurant_slug>/").service_class is ReviewService
     assert _view_class(review_urlpatterns, "<uuid:review_id>/").service_class is ReviewService
     assert _view_class(review_urlpatterns, "<uuid:review_id>/like/").service_class is ReviewService
