@@ -9,7 +9,7 @@ class RestaurantService:
 
     repository_class = RestaurantRepository
 
-    def _init_(self, repository: RestaurantRepository | None = None) -> None:
+    def __init__(self, repository: RestaurantRepository | None = None) -> None:
         self.repository = repository or self.repository_class()
 
     def list_restaurants(self):
