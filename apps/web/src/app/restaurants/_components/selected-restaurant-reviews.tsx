@@ -11,8 +11,8 @@ import {
 } from 'ui-common';
 import { RiCloseLine, RiStarFill } from '@remixicon/react';
 
-import type { Restaurant } from '../../lib/restaurants';
-import { fetchRestaurantReviews, type Review } from '../../lib/reviews';
+import type { Restaurant } from '@/lib/restaurants';
+import { fetchRestaurantReviews, type Review } from '@/lib/reviews';
 import { ReviewSection } from './review-section';
 
 type SelectedRestaurantReviewsProps = {

@@ -9,7 +9,7 @@ import {
   EmptyTitle,
   Skeleton,
 } from 'ui-common';
-import type { Restaurant, PaginationMeta } from '../../lib/restaurants';
+import type { Restaurant, PaginationMeta } from '@/lib/restaurants';
 import { ErrorCallout } from '../../../components/callouts';
 import { RestaurantListItem } from './restaurant-list-item';
 

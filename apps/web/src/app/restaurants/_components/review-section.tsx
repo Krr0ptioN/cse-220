@@ -12,13 +12,13 @@ import {
   RiThumbUpLine,
 } from '@remixicon/react';
 
-import type { Review } from '../../lib/reviews';
+import type { Review } from '@/lib/reviews';
 import {
   fetchRestaurantReviews,
   reactToReview,
   submitReview,
   type ReviewReaction,
-} from '../../lib/reviews';
+} from '@/lib/reviews';
 
 const REVIEW_PAGE_SIZE = 10;
 

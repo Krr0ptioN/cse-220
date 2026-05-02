@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import type { Restaurant } from '../../lib/restaurants';
+import type { Restaurant } from '@/lib/restaurants';
 
 import { useRestaurantData } from '../_hooks/use-restaurant-data';
 import { useExploreStore, useExploreUI } from '../_stores/explore-store';

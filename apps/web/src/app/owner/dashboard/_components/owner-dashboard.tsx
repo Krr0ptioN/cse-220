@@ -41,12 +41,12 @@ import {
   type Restaurant,
   type RestaurantCategory,
   type User,
-} from '../../../lib/restaurants';
+} from '@/lib/restaurants';
 import {
   fetchRestaurantReviews,
   submitReview,
   type Review,
-} from '../../../lib/reviews';
+} from '@/lib/reviews';
 import {
   buildRestaurantWritePayload,
   emptyRestaurantFormValues,

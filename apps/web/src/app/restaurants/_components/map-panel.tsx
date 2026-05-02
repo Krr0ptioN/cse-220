@@ -7,7 +7,7 @@ import {
   MarkerContent,
   MarkerTooltip,
 } from '@/components/ui/map';
-import type { Restaurant } from '../../lib/restaurants';
+import type { Restaurant } from '@/lib/restaurants';
 
 interface MapPanelProps {
   restaurants: Restaurant[];
