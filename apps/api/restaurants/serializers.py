@@ -1,5 +1,3 @@
-"""Restaurant serializers."""
-
 from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
@@ -20,10 +18,18 @@ class CategorySerializer(serializers.ModelSerializer):
             return None
         return create_file_service().get_obfuscated_url(obj.icon_id)
 
+class OpeningHourSerializer(serializers.ModelSerializer):
+    """Restaurant opening hour serializer."""
+
+    day_display = serializers.CharField(source="get_day_of_week_display", read_only=True)
+
+    class Meta:
+        model = OpeningHour
+        fields = ["id", "day_of_week", "day_display", "open_time", "close_time", "is_closed"]
 
 class MenuItemSerializer(serializers.ModelSerializer):
-    """Restaurant menu item read serializer."""
-
+    """Restaurant menu item serializer."""
+    
     restaurant_id = serializers.UUIDField(read_only=True)
     category = CategorySerializer(read_only=True)
     image_url = serializers.SerializerMethodField()
@@ -48,7 +54,6 @@ class MenuItemSerializer(serializers.ModelSerializer):
         if not obj.image_id:
             return None
         return create_file_service().get_obfuscated_url(obj.image_id)
-
 
 class MenuItemWriteSerializer(serializers.ModelSerializer):
     """Request serializer for menu item create/update."""
@@ -83,6 +88,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
     """Restaurant read serializer."""
 
     category = CategorySerializer(read_only=True)
+    opening_hours = OpeningHourSerializer(many=True, read_only=True)
     logo_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -95,6 +101,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "phone",
             "website",
             "category",
+            "opening_hours",
             "logo",
             "logo_url",
             "address_line1",
@@ -116,6 +123,11 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             return None
         return create_file_service().get_obfuscated_url(obj.logo_id)
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not instance.opening_hours.exists():
+            data.pop("opening_hours", None)
+        return data
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
     """Restaurant create serializer."""
@@ -145,7 +157,6 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "price_range",
         ]
 
-
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     """Partial update serializer for restaurant edits."""
 
@@ -171,42 +182,6 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "price_range": {"required": False},
             "logo": {"required": False},
         }
-
-
-class MenuItemSerializer(serializers.ModelSerializer):
-    """Restaurant menu item serializer."""
-    
-    image_url = serializers.SerializerMethodField()
-
-    class Meta:
-        model = MenuItem
-        fields = [
-            "id",
-            "name",
-            "description",
-            "price",
-            "currency",
-            "image",
-            "image_url",
-            "is_available",
-            "sort_order",
-        ]
-
-    def get_image_url(self, obj) -> str | None:
-        if not obj.image_id:
-            return None
-        return create_file_service().get_obfuscated_url(obj.image_id)
-
-
-class OpeningHourSerializer(serializers.ModelSerializer):
-    """Restaurant opening hour serializer."""
-
-    day_display = serializers.CharField(source="get_day_of_week_display", read_only=True)
-
-    class Meta:
-        model = OpeningHour
-        fields = ["id", "day_of_week", "day_display", "open_time", "close_time", "is_closed"]
-
 
 class FavoriteSerializer(serializers.ModelSerializer):
     """User favorite serializer."""
