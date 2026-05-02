@@ -16,6 +16,19 @@ class CategoryDto(BaseDto):
     }
 
 
+class OpeningHourDto(BaseDto):
+    """Opening hour response DTO."""
+
+    field_map = {
+        "id": "id",
+        "day_of_week": "day_of_week",
+        "day_display": "day_display",
+        "open_time": "open_time",
+        "close_time": "close_time",
+        "is_closed": "is_closed",
+    }
+
+
 class RestaurantDto(BaseDto):
     """Restaurant response DTO."""
 
@@ -26,7 +39,6 @@ class RestaurantDto(BaseDto):
         "description": "description",
         "phone": "phone",
         "website": "website",
-        "category": "category_id",
         "address_line1": "address_line1",
         "address_line2": "address_line2",
         "city": "city",
@@ -42,10 +54,11 @@ class RestaurantDto(BaseDto):
     }
 
     relation_map = {
-        "category": dto_relation("category", CategoryDto),
+        "categories": dto_relation("categories", CategoryDto, many=True),
+        "opening_hours": dto_relation("opening_hours", OpeningHourDto, many=True),
     }
 
-    default_with = ("category",)
+    default_with = ("categories", "opening_hours")
 
 
 class RestaurantUpdateDto(BaseDto):

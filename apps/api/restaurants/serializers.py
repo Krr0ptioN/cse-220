@@ -1,15 +1,11 @@
-"""Restaurant serializers."""
-
 from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
 from files.services import create_file_service
-from restaurants.models import Category, MenuItem, Restaurant
+from restaurants.models import Category, MenuItem, Restaurant, OpeningHour
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    """Nested category serializer."""
-
     icon_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -22,9 +18,15 @@ class CategorySerializer(serializers.ModelSerializer):
         return create_file_service().get_obfuscated_url(obj.icon_id)
 
 
-class MenuItemSerializer(serializers.ModelSerializer):
-    """Restaurant menu item read serializer."""
+class OpeningHourSerializer(serializers.ModelSerializer):
+    day_display = serializers.CharField(source="get_day_of_week_display", read_only=True)
 
+    class Meta:
+        model = OpeningHour
+        fields = ["id", "day_of_week", "day_display", "open_time", "close_time", "is_closed"]
+
+
+class MenuItemSerializer(serializers.ModelSerializer):
     restaurant_id = serializers.UUIDField(read_only=True)
     category = CategorySerializer(read_only=True)
     image_url = serializers.SerializerMethodField()
@@ -52,8 +54,6 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
 
 class MenuItemWriteSerializer(serializers.ModelSerializer):
-    """Request serializer for menu item create/update."""
-
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
         source="category",
@@ -80,10 +80,10 @@ class MenuItemWriteSerializer(serializers.ModelSerializer):
             "sort_order": {"required": False},
         }
 
-class RestaurantSerializer(DynamicFieldsModelSerializer):
-    """Restaurant read serializer."""
 
+class RestaurantSerializer(DynamicFieldsModelSerializer):
     categories = CategorySerializer(many=True, read_only=True)
+    opening_hours = OpeningHourSerializer(many=True, read_only=True)
     logo_url = serializers.SerializerMethodField()
 
     class Meta:
@@ -96,6 +96,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "phone",
             "website",
             "categories",
+            "opening_hours",
             "logo",
             "logo_url",
             "address_line1",
@@ -119,14 +120,13 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
-    """Restaurant create serializer."""
-
     category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
         source="categories",
         many=True,
         required=True,
     )
+    opening_hours = OpeningHourSerializer(many=True, required=False)
 
     class Meta:
         model = Restaurant
@@ -136,6 +136,7 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "phone",
             "website",
             "category_ids",
+            "opening_hours",
             "logo",
             "address_line1",
             "address_line2",
@@ -149,14 +150,19 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         categories = validated_data.pop("categories", [])
+        opening_hours_data = validated_data.pop("opening_hours", [])
         restaurant = Restaurant.objects.create(**validated_data)
+        
         if categories:
             restaurant.categories.set(categories)
+        
+        for hour_data in opening_hours_data:
+            OpeningHour.objects.create(restaurant=restaurant, **hour_data)
+            
         return restaurant
 
-class RestaurantUpdateSerializer(RestaurantWriteSerializer):
-    """Partial update serializer for restaurant edits."""
 
+class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
         source="categories",
@@ -180,12 +186,21 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "price_range": {"required": False},
             "logo": {"required": False},
         }
-    
+
     def update(self, instance, validated_data):
         categories = validated_data.pop("categories", None)
+        opening_hours_data = validated_data.pop("opening_hours", None)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+
         if categories is not None:
             instance.categories.set(categories)
+
+        if opening_hours_data is not None:
+            instance.opening_hours.all().delete()
+            for hour_data in opening_hours_data:
+                OpeningHour.objects.create(restaurant=instance, **hour_data)
+
         return instance

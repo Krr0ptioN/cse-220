@@ -1,17 +1,14 @@
-"""Restaurant application services."""
-
 from api.exceptions import ApiError
 from restaurants.repositories import RestaurantRepository
 from users.models import UserRole
 
 
 class RestaurantService:
-    """Coordinates restaurant endpoint behavior."""
 
     repository_class = RestaurantRepository
 
     def __init__(self, repository: RestaurantRepository | None = None) -> None:
-        self.repository = repository or self.repository_class()
+        self.repository = repository or RestaurantRepository()
 
     def list_restaurants(self):
         return self.repository.list_restaurants()
@@ -41,7 +38,14 @@ class RestaurantService:
                 code="forbidden",
                 detail="You do not have permission to create a restaurant.",
             )
-        return self.repository.create(owner=user, data=data)
+        
+        opening_hours = data.pop("opening_hours", [])
+        restaurant = self.repository.create(owner=user, data=data)
+        
+        if opening_hours:
+            self.repository.set_opening_hours(restaurant, opening_hours)
+            
+        return restaurant
 
     def update_restaurant(self, *, user, restaurant, data: dict):
         if user.role != UserRole.OWNER or restaurant.owner_id != user.id:
@@ -50,7 +54,14 @@ class RestaurantService:
                 code="forbidden",
                 detail="You do not have permission to update this restaurant.",
             )
-        return self.repository.save(restaurant, data)
+        
+        opening_hours = data.pop("opening_hours", None)
+        updated_restaurant = self.repository.save(restaurant, data)
+        
+        if opening_hours is not None:
+            self.repository.set_opening_hours(updated_restaurant, opening_hours)
+            
+        return updated_restaurant
 
     def delete_restaurant(self, *, user, restaurant) -> None:
         if user.role != UserRole.ADMIN:

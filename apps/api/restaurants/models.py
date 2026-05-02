@@ -1,23 +1,18 @@
-"""Restaurant domain models."""
-
 import uuid
 
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
 
 
 class PriceRange(models.TextChoices):
-    """Supported restaurant price ranges."""
-
     LOW = "1", "Low"
     MEDIUM = "2", "Medium"
     HIGH = "3", "High"
 
 
 class Weekday(models.IntegerChoices):
-    """Weekday values used for opening hours."""
-
     MONDAY = 0, "Monday"
     TUESDAY = 1, "Tuesday"
     WEDNESDAY = 2, "Wednesday"
@@ -28,8 +23,6 @@ class Weekday(models.IntegerChoices):
 
 
 class Category(models.Model):
-    """Restaurant category."""
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True)
@@ -51,13 +44,11 @@ class Category(models.Model):
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
-    def __str__(self) -> str:
+    def _str_(self) -> str:
         return self.name
 
 
 class Restaurant(models.Model):
-    """Restaurant model with location, ownership, and aggregate rating data."""
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True)
@@ -130,13 +121,11 @@ class Restaurant(models.Model):
             self.slug = candidate
         super().save(*args, **kwargs)
 
-    def __str__(self) -> str:
+    def _str_(self) -> str:
         return self.name
 
 
 class MenuItem(models.Model):
-    """Restaurant menu item."""
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     restaurant = models.ForeignKey(
         Restaurant,
@@ -165,13 +154,11 @@ class MenuItem(models.Model):
     class Meta:
         ordering = ["sort_order", "name"]
 
-    def __str__(self) -> str:
+    def _str_(self) -> str:
         return f"{self.restaurant.name} - {self.name}"
 
 
 class OpeningHour(models.Model):
-    """Opening hour for a restaurant by weekday."""
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     restaurant = models.ForeignKey(
         Restaurant,
@@ -192,13 +179,27 @@ class OpeningHour(models.Model):
             )
         ]
 
-    def __str__(self) -> str:
-        return f"{self.restaurant.name} - {self.get_day_of_week_display()}"
+    def clean(self):
+        if not self.is_closed:
+            if not self.open_time or not self.close_time:
+                raise ValidationError(
+                    "Restoran kapalı değilse açılış ve kapanış saatleri zorunludur."
+                )
+            if self.open_time >= self.close_time:
+                raise ValidationError(
+                    "Kapanış saati açılış saatinden sonra olmalıdır."
+                )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def _str_(self) -> str:
+        status = "Kapalı" if self.is_closed else f"{self.open_time}-{self.close_time}"
+        return f"{self.restaurant.name} - {self.get_day_of_week_display()} ({status})"
 
 
 class Favorite(models.Model):
-    """User favorite relation with restaurants."""
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -221,5 +222,5 @@ class Favorite(models.Model):
             )
         ]
 
-    def __str__(self) -> str:
+    def _str_(self) -> str:
         return f"{self.user} -> {self.restaurant}"

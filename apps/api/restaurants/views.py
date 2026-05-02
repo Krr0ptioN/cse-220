@@ -1,5 +1,3 @@
-"""Views for restaurant endpoints."""
-
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -18,13 +16,12 @@ from restaurants.serializers import (
     RestaurantSerializer,
     RestaurantUpdateSerializer,
     RestaurantWriteSerializer,
+    OpeningHourSerializer,
 )
 from restaurants.services import RestaurantService
 
 
 class RestaurantsController(APIView):
-    """List restaurants or create a new restaurant."""
-
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
@@ -32,36 +29,12 @@ class RestaurantsController(APIView):
 
     @extend_schema(
         summary="List restaurants",
-        description=(
-            "Retrieve a paginated list of restaurants. Supports field filtering and "
-            "relation expansion through query parameters."
-        ),
         parameters=[
-            OpenApiParameter(
-                "page",
-                OpenApiTypes.INT,
-                description="A page number within the paginated result set.",
-            ),
-            OpenApiParameter(
-                "page_size",
-                OpenApiTypes.INT,
-                description="Number of results to return per page.",
-            ),
-            OpenApiParameter(
-                "include",
-                OpenApiTypes.STR,
-                description="Comma-separated list of fields to include in the response.",
-            ),
-            OpenApiParameter(
-                "with",
-                OpenApiTypes.STR,
-                description="Comma-separated list of relations to expand.",
-            ),
-            OpenApiParameter(
-                "omit",
-                OpenApiTypes.STR,
-                description="Comma-separated list of fields to exclude from the response.",
-            ),
+            OpenApiParameter("page", OpenApiTypes.INT),
+            OpenApiParameter("page_size", OpenApiTypes.INT),
+            OpenApiParameter("include", OpenApiTypes.STR),
+            OpenApiParameter("with", OpenApiTypes.STR),
+            OpenApiParameter("omit", OpenApiTypes.STR),
         ],
         responses={200: RestaurantSerializer(many=True)},
         tags=["Restaurants"],
@@ -88,7 +61,6 @@ class RestaurantsController(APIView):
 
     @extend_schema(
         summary="Create restaurant",
-        description="Register a new restaurant spot in the platform. Requires owner role.",
         request=RestaurantWriteSerializer,
         responses={201: RestaurantSerializer},
         tags=["Restaurants"],
@@ -105,8 +77,6 @@ class RestaurantsController(APIView):
 
 
 class CategoryListController(APIView):
-    """List categories for restaurant forms."""
-
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
@@ -118,8 +88,6 @@ class CategoryListController(APIView):
 
 
 class OwnerRestaurantsController(APIView):
-    """List restaurants owned by the current restaurant manager."""
-
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
@@ -132,8 +100,6 @@ class OwnerRestaurantsController(APIView):
 
 
 class RestaurantMenuItemsController(APIView):
-    """List or create menu items for a restaurant."""
-
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
@@ -171,8 +137,6 @@ class RestaurantMenuItemsController(APIView):
 
 
 class RestaurantMenuItemDetailController(APIView):
-    """Retrieve, update, or delete one restaurant menu item."""
-
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
@@ -238,8 +202,6 @@ class RestaurantMenuItemDetailController(APIView):
 
 
 class RestaurantDetailController(APIView):
-    """Retrieve, update, or delete a restaurant."""
-
     service_class = RestaurantService
 
     def get_service(self) -> RestaurantService:
@@ -247,7 +209,6 @@ class RestaurantDetailController(APIView):
 
     @extend_schema(
         summary="Get restaurant details",
-        description="Retrieve detailed information about a specific restaurant by its unique slug.",
         responses={200: RestaurantSerializer},
         tags=["Restaurants"],
     )
@@ -257,7 +218,6 @@ class RestaurantDetailController(APIView):
 
     @extend_schema(
         summary="Update restaurant",
-        description="Modify an existing restaurant's details. Must be the restaurant owner.",
         request=RestaurantUpdateSerializer,
         responses={200: RestaurantSerializer},
         tags=["Restaurants"],
@@ -277,7 +237,6 @@ class RestaurantDetailController(APIView):
 
     @extend_schema(
         summary="Delete restaurant",
-        description="Permanently remove a restaurant from the platform. Requires admin role.",
         responses={204: None},
         tags=["Restaurants"],
     )
