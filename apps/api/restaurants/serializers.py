@@ -132,9 +132,10 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 class RestaurantWriteSerializer(serializers.ModelSerializer):
     """Restaurant create serializer."""
 
-    category_id = serializers.PrimaryKeyRelatedField(
+    category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source="category",
+        source="categories",
+        many=True,
         required=True,
     )
 
@@ -145,7 +146,7 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "description",
             "phone",
             "website",
-            "category_id",
+            "category_ids",
             "logo",
             "address_line1",
             "address_line2",
@@ -160,9 +161,10 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     """Partial update serializer for restaurant edits."""
 
-    category_id = serializers.PrimaryKeyRelatedField(
+    category_ids = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
-        source="category",
+        source="categories",
+        many=True,
         required=False,
     )
 
