@@ -4,6 +4,14 @@
   "sourceRoot": "apps/web",
   "projectType": "application",
   "tags": [],
-  "// targets": "to see all targets run: nx show project web --web",
-  "targets": {}
+  "targets": {
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "../../node_modules/.bin/vitest run src/app/auth/_lib/auth-flow.test.ts src/app/auth/_lib/auth-api.test.ts src/app/owner/dashboard/_lib/owner-dashboard-utils.test.ts src/app/lib/reviews.test.ts --environment node",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true
+    }
+  }
 }

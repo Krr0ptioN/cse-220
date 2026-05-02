@@ -1,11 +1,15 @@
-"""Health unit test module."""
+"""Health endpoint tests."""
 
-from api.health import health
+from django.test import Client
 
 
 def test_health():
-    """Test the health function."""
-    assert health() == JsonResponse({
-        "status": "ok",
-        "service": "flavormap-api"
-    })
+    """Health endpoint returns the expected payload."""
+    client = Client()
+
+    response = client.get("/api/v1/health/")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    assert payload["service"] == "flavormap-api"

@@ -7,6 +7,8 @@ exclude_lines = ['if TYPE_CHECKING:']
 show_missing = true
 
 [tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "tests.py"]
 addopts = """
  --cov
  --cov-report html:'../coverage/apps/html'
@@ -32,13 +34,18 @@ readme = 'README.md'
   django-cors-headers = "^4.4"
   pillow = "^11.0"  # For image handling
   python-decouple = "^3.8"  # For environment variables
+  djangorestframework = "^3.17.1"
+  drf-spectacular = "^0.29.0"
+  minio = "^7.2.12"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.3.1"
   pytest = "8.3.4"
+  pytest-django = "4.9.0"
   pytest-sugar = "1.0.0"
   pytest-cov = "6.0.0"
   pytest-html = "4.1.1"
+  ruff = "^0.15.12"
 
 [build-system]
 requires = ["poetry-core"]

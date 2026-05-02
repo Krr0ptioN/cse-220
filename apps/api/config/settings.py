@@ -35,8 +35,14 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Third-party
     "corsheaders",
+    "rest_framework",
+    "drf_spectacular",
     # Local apps
     "api",
+    "users",
+    "restaurants",
+    "reviews",
+    "files",
 ]
 
 MIDDLEWARE = [
@@ -106,17 +112,96 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# Object file storage
+FILE_STORAGE_BACKEND = config("FILE_STORAGE_BACKEND", default="local")
+FILE_STORAGE_LOCAL_ROOT = config("FILE_STORAGE_LOCAL_ROOT", default=str(MEDIA_ROOT))
+FILE_STORAGE_LOCAL_URL = config("FILE_STORAGE_LOCAL_URL", default=MEDIA_URL)
+FILE_STORAGE_MAX_SIZE = config("FILE_STORAGE_MAX_SIZE", default=5 * 1024 * 1024, cast=int)
+FILE_STORAGE_MAX_IMAGE_PIXELS = config(
+    "FILE_STORAGE_MAX_IMAGE_PIXELS",
+    default=20_000_000,
+    cast=int,
+)
+FILE_STORAGE_THUMBNAIL_SIZES = config(
+    "FILE_STORAGE_THUMBNAIL_SIZES",
+    default="64,128,256",
+    cast=lambda v: tuple(int(size.strip()) for size in v.split(",") if size.strip()),
+)
+
+MINIO_ENDPOINT = config("MINIO_ENDPOINT", default="localhost:9000")
+MINIO_ACCESS_KEY = config("MINIO_ACCESS_KEY", default="minioadmin")
+MINIO_SECRET_KEY = config("MINIO_SECRET_KEY", default="minioadmin")
+MINIO_BUCKET_NAME = config("MINIO_BUCKET_NAME", default="uploads")
+MINIO_SECURE = config("MINIO_SECURE", default=False, cast=bool)
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# Custom user model
+AUTH_USER_MODEL = "users.User"
+
 # CORS settings
-CORS_ALLOWED_ORIGINS = config(
-    "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000,http://localhost:3001",
+is_debug = config("DEBUG", default=None)
+if is_debug is None:
+    is_debug = config("DJANGO_DEBUG", default=True, cast=bool)
+else:
+    is_debug = config("DEBUG", default=False, cast=bool)
+
+if is_debug:
+    ALLOWED_HOSTS = ["*"]
+    CORS_ALLOW_ALL_ORIGINS = True
+else:
+    CORS_ALLOWED_ORIGINS = config(
+        "CORS_ALLOWED_ORIGINS",
+        default="http://localhost:3000,http://localhost:3001,http://localhost:8020",
+        cast=lambda v: [s.strip() for s in v.split(",")],
+    )
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default=(
+        "http://localhost:3000,http://localhost:3001,http://localhost:3050,"
+        "http://localhost:8020,http://127.0.0.1:3000,http://127.0.0.1:3001,"
+        "http://127.0.0.1:3050,http://127.0.0.1:8020,"
+        "http://192.168.1.118:3000,http://192.168.1.118:3001,"
+        "http://192.168.1.118:3050,http://192.168.1.118:8020"
+    ),
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
-CORS_ALLOW_CREDENTIALS = True
 
-# File upload settings
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "api.exceptions.custom_exception_handler",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "FlavorMap API",
+    "DESCRIPTION": (
+        "Restaurant review and discovery platform — discover restaurants, "
+        "write reviews, rate experiences, and manage favorites."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "REDOC_UI_SETTINGS": {
+        "theme": {
+            "colors": {
+                "primary": {"main": "#4A74E8"},
+            },
+            "typography": {
+                "fontFamily": "Inter, sans-serif",
+                "headings": {"fontFamily": "Inter, sans-serif"},
+            },
+        },
+    },
+    "COMPONENT_SPLIT_PATCH": True,
+    "COMPONENT_SPLIT_REQUEST": True,
+}

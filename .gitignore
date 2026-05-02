@@ -1,4 +1,3 @@
-
 .nx/installation
 .nx/cache
 .nx/workspace-data
@@ -18,7 +17,7 @@ tmp
 
 # dependencies
 node_modules
- 
+
 # IDEs and editors
 /.idea
 .project
@@ -81,3 +80,15 @@ apps/api/logs/
 /research
 /docs/research/restaurant-uxui
 /.vscode/extensions.json
+/apps/api/.coverage
+/apps/coverage/apps
+/apps/reports/apps/unittests
+/.cache/
+/.coverage
+vite.config.*.timestamp*
+vitest.config.*.timestamp*
+
+storybook-static
+
+.claude/worktrees
+.claude/settings.local.json
