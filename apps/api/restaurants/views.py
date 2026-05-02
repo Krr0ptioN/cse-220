@@ -16,7 +16,7 @@ from restaurants.serializers import (
     RestaurantSerializer,
     RestaurantUpdateSerializer,
     RestaurantWriteSerializer,
-    OpeningHourSerializer,
+
 )
 from restaurants.services import RestaurantService
 
