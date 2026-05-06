@@ -7,7 +7,6 @@ from django.contrib.auth import get_user_model
 from restaurants.models import Category, OpeningHour, Restaurant
 from reviews.models import Review, ReviewLike
 from reviews.services import ReviewService
-from restaurants.services import RestaurantService
 from api.exceptions import ApiError
 
 pytestmark = pytest.mark.django_db
