@@ -1,7 +1,11 @@
 "Repository for restaurant data access."""
 
+<<<<<<< HEAD
 from django.db.models import QuerySet
 from restaurants.models import Category, MenuItem, Restaurant
+=======
+from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
+>>>>>>> 5223deffb887874a029cfebed6de59eaf889ced2
 
 
 class RestaurantRepository:
@@ -17,11 +21,14 @@ class RestaurantRepository:
             queryset = queryset.filter(price_range=price_range)
             
         return queryset
+    def list_restaurants(self):
+        return Restaurant.objects.prefetch_related("categories", "opening_hours").all()
 
     def list_categories(self) -> QuerySet[Category]:
         """Returns all available restaurant categories."""
         return Category.objects.all()
 
+<<<<<<< HEAD
     def list_by_owner(self, owner) -> QuerySet[Restaurant]:
         """Returns restaurants owned by a specific user."""
         return Restaurant.objects.filter(owner=owner).prefetch_related("categories")
@@ -32,6 +39,18 @@ class RestaurantRepository:
             return Restaurant.objects.get(slug=slug)
         except Restaurant.DoesNotExist:
             return None
+=======
+    def list_by_owner(self, owner):
+        return Restaurant.objects.prefetch_related("categories", "opening_hours").filter(owner=owner)
+
+    def get_by_slug(self, slug: str):
+        return (
+            Restaurant.objects.select_related("owner")
+            .prefetch_related("categories", "opening_hours")
+            .filter(slug=slug)
+            .first()
+        )
+>>>>>>> 5223deffb887874a029cfebed6de59eaf889ced2
 
     def create(self, *, owner, data: dict) -> Restaurant:
         """Creates a new restaurant instance."""
@@ -78,5 +97,17 @@ class RestaurantRepository:
         return menu_item
 
     def delete_menu_item(self, menu_item: MenuItem) -> None:
+<<<<<<< HEAD
         """Deletes a menu item."""
         menu_item.delete()
+=======
+        menu_item.delete()
+
+    def set_opening_hours(self, restaurant, hours_data: list):
+        OpeningHour.objects.filter(restaurant=restaurant).delete()
+        hours = [
+            OpeningHour(restaurant=restaurant, **hour)
+            for hour in hours_data
+        ]
+        return OpeningHour.objects.bulk_create(hours)
+>>>>>>> 5223deffb887874a029cfebed6de59eaf889ced2
