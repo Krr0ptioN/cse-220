@@ -4,7 +4,7 @@ const { sessionRequestMock } = vi.hoisted(() => ({
   sessionRequestMock: vi.fn(),
 }));
 
-vi.mock('../auth/_lib/auth-api', () => ({
+vi.mock('@/app/(auth)/auth/_lib/auth-api', () => ({
   sessionRequest: sessionRequestMock,
 }));
 

@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, getApiBaseUrl } from './restaurants';
-import { sessionRequest } from '../auth/_lib/auth-api';
+import { sessionRequest } from '@/app/(auth)/auth/_lib/auth-api';
 
 export type Review = {
   id: string;

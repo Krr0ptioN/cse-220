@@ -35,7 +35,7 @@ import {
   RiUser3Line,
 } from '@remixicon/react';
 
-import { sessionRequest } from '../../../auth/_lib/auth-api';
+import { sessionRequest } from '@/app/(auth)/auth/_lib/auth-api';
 import {
   API_ENDPOINTS,
   type Restaurant,

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { startTransition, useState, type FormEvent } from 'react';
-import type { ReactNode } from 'react';
 import {
   Badge,
   Button,
@@ -14,16 +13,8 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  Separator,
 } from 'ui-common';
-import {
-  RiArrowRightLine,
-  RiCheckLine,
-  RiRestaurantLine,
-  RiSparklingLine,
-  RiUserStarLine,
-  RiShieldCheckLine,
-} from '@remixicon/react';
+import { RiArrowRightLine } from '@remixicon/react';
 
 import { registerUser } from '../_lib/auth-api';
 import {
@@ -49,7 +40,7 @@ export function SignUp({ variant }: SignUpProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function onSubmit(event: SubmitEvent) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
