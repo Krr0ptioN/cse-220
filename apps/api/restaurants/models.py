@@ -121,7 +121,7 @@ class Restaurant(models.Model):
             self.slug = candidate
         super().save(*args, **kwargs)
 
-    def _str_(self) -> str:
+    def __str__(self) -> str:
         return self.name
 
 
