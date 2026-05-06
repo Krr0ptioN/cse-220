@@ -15,37 +15,31 @@ class ReviewRepository:
     def get_restaurant(self, restaurant_slug: str):
         return Restaurant.objects.filter(slug=restaurant_slug).first()
 
-    def list_restaurant_reviews(self, restaurant):
+    def list_restaurant_reviews(self, restaurant, sort: str = "recent"):
         reply_queryset = (
             Review.objects.select_related("user", "restaurant")
             .annotate(
-                like_total=Count(
-                    "reactions",
-                    filter=Q(reactions__is_like=True),
-                ),
-                dislike_total=Count(
-                    "reactions",
-                    filter=Q(reactions__is_like=False),
-                ),
+                like_total=Count("reactions", filter=Q(reactions__is_like=True)),
+                dislike_total=Count("reactions", filter=Q(reactions__is_like=False)),   
             )
             .order_by("created_at")
         )
-        return (
+        queryset = (
             Review.objects.filter(restaurant=restaurant, parent__isnull=True)
             .select_related("user", "restaurant")
             .prefetch_related(Prefetch("replies", queryset=reply_queryset))
             .annotate(
-                like_total=Count(
-                    "reactions",
-                    filter=Q(reactions__is_like=True),
-                ),
-                dislike_total=Count(
-                    "reactions",
-                    filter=Q(reactions__is_like=False),
-                ),
+                like_total=Count("reactions", filter=Q(reactions__is_like=True)),
+                dislike_total=Count("reactions", filter=Q(reactions__is_like=False)),
+                helpfulness=Count("reactions", filter=Q(reactions__is_like=True))
+                    - Count("reactions", filter=Q(reactions__is_like=False)),
             )
-            .order_by("-created_at")
         )
+        if sort == "helpful" :
+            queryset = queryset.order_by("-helpfulness", "-created_at")
+        else:
+            queryset = queryset.order_by("-created_at")
+        return queryset
 
     def get_parent_review(self, parent_id):
         return Review.objects.filter(id=parent_id).first()
@@ -95,3 +89,17 @@ class ReviewRepository:
         review.like_count = ReviewLike.objects.filter(review=review, is_like=True).count()
         review.dislike_count = ReviewLike.objects.filter(review=review, is_like=False).count()
         review.save(update_fields=["like_count", "dislike_count", "updated_at"])
+
+    def get_reaction(self, *, review, user):
+        return ReviewLike.objects.filter(review=review, user=user).first()
+
+    def remove_reaction(self, *, review, user) -> None:
+        ReviewLike.objects.filter(review=review, user=user).delete()
+
+    def get_user_reactions_for_restaurant(self, *, restaurant, user) -> dict:
+        reactions = ReviewLike.objects.filter(
+            review__restaurant=restaurant,
+            review__parent__isnull=True,
+            user=user,
+        ).values("review_id", "is_like")
+        return {str(r["review_id"]): ("like" if r["is_like"] else "dislike") for r in reactions}

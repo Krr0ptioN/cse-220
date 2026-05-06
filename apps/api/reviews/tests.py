@@ -185,3 +185,159 @@ def test_reply_to_nonexistent_review_returns_404():
         assert response.json()["error"]["code"] == "not_found"
     finally:
         user.delete()
+
+def test_like_requires_authentication():
+    """POST /reviews/<id>/like/ must reject anonymous users."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant, category = _create_restaurant(owner)
+    reviewer = _create_user()
+    review = _create_review(restaurant=restaurant, user=reviewer)
+
+    try:
+        response = client.post(f"/api/v1/reviews/{review.id}/like/")
+        assert response.status_code == 401
+    finally:
+        review.delete()
+        restaurant.delete()
+        category.delete()
+        reviewer.delete()
+        owner.delete()
+
+
+def test_like_creates_reaction():
+    """POST /reviews/<id>/like/ increments like_count by 1."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant, category = _create_restaurant(owner)
+    reviewer = _create_user()
+    review = _create_review(restaurant=restaurant, user=reviewer)
+    voter = _create_user()
+
+    try:
+        client.force_login(voter)
+        response = client.post(f"/api/v1/reviews/{review.id}/like/")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["like_count"] == 1
+        assert data["dislike_count"] == 0
+        assert data["user_reaction"] == "like"
+    finally:
+        Review.objects.filter(restaurant=restaurant).delete()
+        restaurant.delete()
+        category.delete()
+        reviewer.delete()
+        voter.delete()
+        owner.delete()
+
+
+def test_like_toggles_off_when_clicked_twice():
+    """POST /reviews/<id>/like/ twice removes the reaction (toggle off)."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant, category = _create_restaurant(owner)
+    reviewer = _create_user()
+    review = _create_review(restaurant=restaurant, user=reviewer)
+    voter = _create_user()
+
+    try:
+        client.force_login(voter)
+        client.post(f"/api/v1/reviews/{review.id}/like/")
+        response = client.post(f"/api/v1/reviews/{review.id}/like/")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["like_count"] == 0
+        assert data["user_reaction"] is None
+    finally:
+        Review.objects.filter(restaurant=restaurant).delete()
+        restaurant.delete()
+        category.delete()
+        reviewer.delete()
+        voter.delete()
+        owner.delete()
+
+
+def test_like_switches_to_dislike():
+    """POST /reviews/<id>/dislike/ after a like switches the reaction."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant, category = _create_restaurant(owner)
+    reviewer = _create_user()
+    review = _create_review(restaurant=restaurant, user=reviewer)
+    voter = _create_user()
+
+    try:
+        client.force_login(voter)
+        client.post(f"/api/v1/reviews/{review.id}/like/")
+        response = client.post(f"/api/v1/reviews/{review.id}/dislike/")
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["like_count"] == 0
+        assert data["dislike_count"] == 1
+        assert data["user_reaction"] == "dislike"
+    finally:
+        Review.objects.filter(restaurant=restaurant).delete()
+        restaurant.delete()
+        category.delete()
+        reviewer.delete()
+        voter.delete()
+        owner.delete()
+
+
+def test_sort_by_helpful_returns_most_liked_first():
+    """GET ?sort=helpful returns reviews ordered by helpfulness score."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant, category = _create_restaurant(owner)
+    reviewer1 = _create_user()
+    reviewer2 = _create_user()
+    voter = _create_user()
+
+    # review1 gets 1 like, review2 gets none
+    review1 = _create_review(restaurant=restaurant, user=reviewer1, content="First review here")
+    review2 = _create_review(restaurant=restaurant, user=reviewer2, content="Second review here")
+
+    try:
+        client.force_login(voter)
+        client.post(f"/api/v1/reviews/{review1.id}/like/")
+
+        response = client.get(f"/api/v1/reviews/restaurants/{restaurant.slug}/?sort=helpful")
+        assert response.status_code == 200
+        reviews = response.json()["data"]
+        ids = [r["id"] for r in reviews]
+        assert ids.index(str(review1.id)) < ids.index(str(review2.id))
+    finally:
+        Review.objects.filter(restaurant=restaurant).delete()
+        restaurant.delete()
+        category.delete()
+        reviewer1.delete()
+        reviewer2.delete()
+        voter.delete()
+        owner.delete()
+
+
+def test_user_reaction_shown_in_review_list():
+    """Review list includes user_reaction field reflecting the current user's vote."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant, category = _create_restaurant(owner)
+    reviewer = _create_user()
+    review = _create_review(restaurant=restaurant, user=reviewer)
+    voter = _create_user()
+
+    try:
+        client.force_login(voter)
+        client.post(f"/api/v1/reviews/{review.id}/like/")
+
+        response = client.get(f"/api/v1/reviews/restaurants/{restaurant.slug}/")
+        assert response.status_code == 200
+        reviews = response.json()["data"]
+        target = next(r for r in reviews if r["id"] == str(review.id))
+        assert target["user_reaction"] == "like"
+    finally:
+        Review.objects.filter(restaurant=restaurant).delete()
+        restaurant.delete()
+        category.delete()
+        reviewer.delete()
+        voter.delete()
+        owner.delete()
