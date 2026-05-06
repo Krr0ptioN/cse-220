@@ -6,8 +6,11 @@ from restaurants.models import Category, MenuItem, Restaurant
 class RestaurantRepository:
     """Repository for restaurant persistence and queries."""
 
-    def list_restaurants(self):
-        return Restaurant.objects.prefetch_related("categories").all()
+    def list_restaurants(self, price_range=None):
+        queryset = Restaurant.objects.prefetch_related("categories").all()
+        if price_range:
+            queryset = queryset.filter(price_range=price_range)
+        return queryset
 
     def list_categories(self):
         return Category.objects.all()

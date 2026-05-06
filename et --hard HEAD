@@ -1,0 +1,85 @@
+[33m35c45fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/open-hours-serialization[m[33m, [m[1;31morigin/feat/open-hours-serialization[m[33m, [m[1;32mmain[m[33m)[m HEAD@{0}: checkout: moving from main to feat/open-hours-serialization
+[33m35c45fb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/open-hours-serialization[m[33m, [m[1;31morigin/feat/open-hours-serialization[m[33m, [m[1;32mmain[m[33m)[m HEAD@{1}: commit (merge): Merge branch 'main' of https://github.com/Krr0ptioN/cse-220
+[33m2b19b8d[m HEAD@{2}: checkout: moving from feat/resturant-crud to main
+[33md481582[m[33m ([m[1;31morigin/feat/resturant-crud[m[33m, [m[1;32mfeat/resturant-crud[m[33m)[m HEAD@{3}: pull origin feat/resturant-crud: Merge made by the 'ort' strategy.
+[33mf10070c[m HEAD@{4}: commit: fix: resolve dunder init typo and cleanup unused imports
+[33m395ddf1[m HEAD@{5}: commit: fix: force resolve all hidden conflicts
+[33ma0c2dfd[m HEAD@{6}: commit: fix: resolve merge conflicts and align with restaurant tests
+[33m3726d76[m HEAD@{7}: pull origin feat/resturant-crud: Fast-forward
+[33mf44aa69[m HEAD@{8}: reset: moving to HEAD
+[33mf44aa69[m HEAD@{9}: reset: moving to HEAD~1
+[33mf7598e9[m HEAD@{10}: reset: moving to HEAD
+[33mf7598e9[m HEAD@{11}: commit: refactor(restaurants): finalize opening hours logic and align with project architecture
+[33mf44aa69[m HEAD@{12}: commit: fix(api): remove unused user variables for linting
+[33mfc41619[m HEAD@{13}: commit: fix(restaurants): fix controller names and resolve linting
+[33mcefe4cb[m HEAD@{14}: commit: fix(restaurants): fix controller names and resolve linting
+[33m517b130[m HEAD@{15}: commit: fix: add missing get_service and fix owned restaurants method name
+[33m1d889de[m HEAD@{16}: commit: feat: implement restaurant crud and fix controller imports
+[33mb4598aa[m HEAD@{17}: commit: feat: complete restaurant crud with opening hours and menu items
+[33me353c4d[m[33m ([m[1;31mupstream/main[m[33m, [m[1;31mupstream/HEAD[m[33m)[m HEAD@{18}: reset: moving to upstream/main
+[33mdac20de[m HEAD@{19}: commit: feat: finalized restaurant models
+[33m2b19b8d[m HEAD@{20}: reset: moving to main
+[33m9690b8b[m HEAD@{21}: checkout: moving from main to feat/resturant-crud
+[33m2b19b8d[m HEAD@{22}: checkout: moving from feat/resturant-crud to main
+[33m9690b8b[m HEAD@{23}: rebase (finish): returning to refs/heads/feat/resturant-crud
+[33m9690b8b[m HEAD@{24}: rebase (pick): refactor: converted all logic to standart DRF and removed old controllers
+[33mb685b1c[m HEAD@{25}: rebase (pick): feat: added opening hours serialization and viewsets with drf
+[33m549694b[m HEAD@{26}: rebase (continue): docs(api): commands for managing the the api app with nx
+[33m9bbf755[m HEAD@{27}: rebase (pick): feat: add restaurant CRUD scaffolds with developer TODO guides
+[33m8fe9b83[m HEAD@{28}: rebase (pick): feat: implement review CRUD endpoints with full validation and tests
+[33m708a982[m HEAD@{29}: rebase (pick): chore: to be implemented by team members
+[33m397f2bd[m HEAD@{30}: rebase (pick): test(api/resturants): create, delete, edit tests
+[33m8f4b58e[m HEAD@{31}: rebase (pick): feat(api-http): route configuraiton error handling
+[33mba5ea6c[m HEAD@{32}: rebase (pick): test(api): restaurant tests
+[33md9abd46[m HEAD@{33}: rebase (pick): feat(data): scrabing google map for restaurant
+[33m6181447[m HEAD@{34}: rebase (pick): feat(api/restaurants): adapting dto and serialization for resturants list and detail
+[33me911fc4[m HEAD@{35}: rebase (pick): feat(api-http): serialization, pagination, and dto
+[33m3c54c57[m HEAD@{36}: rebase (continue): chore: updating the plan for an accurate timeline
+[33mba67009[m HEAD@{37}: rebase (continue): chore: minor improvements on the assci alignments
+[33m00f0619[m HEAD@{38}: rebase (continue): chore: ignore research docs due to rapid changes
+[33mc031198[m HEAD@{39}: rebase (continue): docs: add PRD with dependencies and technical specification
+[33mc5e8556[m HEAD@{40}: rebase (pick): chore: development plan
+[33m13d63c9[m HEAD@{41}: rebase (pick): chore: removing sample model
+[33m8c298ae[m HEAD@{42}: rebase (pick): feat(dev-env): adding mock data for seeding the db
+[33m288f755[m HEAD@{43}: rebase (pick): ci: adding backend validations
+[33mc03ba45[m HEAD@{44}: rebase (pick): chore: setup ci pr check and e2e
+[33m82bb156[m HEAD@{45}: rebase (continue): feat(api): scaffold restaurant domains and modularize api-http
+[33mf5d034e[m HEAD@{46}: rebase (pick): docs(api): commands for managing the the api app with nx
+[33mdde6a82[m HEAD@{47}: rebase (pick): refact: removing uncessary api bolerplate routes and keeping page component lean
+[33m1da03a2[m HEAD@{48}: rebase (pick): feat(api/http): http controller setup framework as helper for routing and response struct handler
+[33m9f79b98[m HEAD@{49}: rebase (pick): chore: starting the feature crud for resturant
+[33m2b19b8d[m HEAD@{50}: rebase (start): checkout main
+[33me78d932[m HEAD@{51}: checkout: moving from main to feat/resturant-crud
+[33m2b19b8d[m HEAD@{52}: checkout: moving from feat/resturant-crud to main
+[33me78d932[m HEAD@{53}: commit: refactor: converted all logic to standart DRF and removed old controllers
+[33m2dc7f14[m HEAD@{54}: checkout: moving from main to feat/resturant-crud
+[33m2b19b8d[m HEAD@{55}: pull origin main: Merge made by the 'ort' strategy.
+[33m991d5de[m HEAD@{56}: checkout: moving from main to main
+[33m991d5de[m HEAD@{57}: reset: moving to HEAD
+[33m991d5de[m HEAD@{58}: checkout: moving from main to main
+[33m991d5de[m HEAD@{59}: reset: moving to HEAD
+[33m991d5de[m HEAD@{60}: checkout: moving from main to main
+[33m991d5de[m HEAD@{61}: reset: moving to HEAD
+[33m991d5de[m HEAD@{62}: checkout: moving from main to main
+[33m991d5de[m HEAD@{63}: reset: moving to HEAD
+[33m991d5de[m HEAD@{64}: reset: moving to HEAD
+[33m991d5de[m HEAD@{65}: pull origin main: updating HEAD
+[33m991d5de[m HEAD@{66}: checkout: moving from main to main
+[33m991d5de[m HEAD@{67}: checkout: moving from feat/resturant-crud to main
+[33m2dc7f14[m HEAD@{68}: commit: feat: added opening hours serialization and viewsets with drf
+[33m6f1bdfa[m[33m ([m[1;31mupstream/feat/review-crud[m[33m)[m HEAD@{69}: pull upstream feat/review-crud: Fast-forward
+[33mfa71edb[m HEAD@{70}: checkout: moving from feat/restaurant-create-burak to feat/resturant-crud
+[33m6f8858d[m[33m ([m[1;32mfeat/restaurant-create-burak[m[33m)[m HEAD@{71}: commit (amend): feat(api/restaurant): implemented restaurant creation
+[33mde29475[m HEAD@{72}: commit (amend): feat(api/restaurant): fix import paths and scope
+[33mb2786a7[m HEAD@{73}: commit (amend): feat(api/restaurant): implemented restaurant creation
+[33m06c4fe7[m HEAD@{74}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33m5639dcc[m HEAD@{75}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33md394560[m HEAD@{76}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33m3df4b97[m HEAD@{77}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33m39cff0b[m HEAD@{78}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33m8a934be[m HEAD@{79}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33md610219[m HEAD@{80}: commit (amend): feat(api/restaurant): implement creation with role and phone validation
+[33mb96b44a[m HEAD@{81}: commit: feat: implemented restaurant creation based on TODO guide
+[33mfa71edb[m HEAD@{82}: checkout: moving from feat/resturant-crud to feat/restaurant-create-burak
+[33mfa71edb[m HEAD@{83}: checkout: moving from main to feat/resturant-crud
+[33m991d5de[m HEAD@{84}: clone: from https://github.com/Krr0ptioN/cse-220.git

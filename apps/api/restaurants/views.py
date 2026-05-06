@@ -62,12 +62,18 @@ class RestaurantsController(APIView):
                 OpenApiTypes.STR,
                 description="Comma-separated list of fields to exclude from the response.",
             ),
+            OpenApiParameter(
+                "price_range",
+                OpenApiTypes.INT,
+                description="Filter by price range (1=€, 2=€€, 3=€€€).",
+            ),
         ],
         responses={200: RestaurantSerializer(many=True)},
         tags=["Restaurants"],
     )
     def get(self, request):
-        queryset = self.get_service().list_restaurants()
+        price_range = request.query_params.get("price_range")
+        queryset = self.get_service().list_restaurants(price_range=price_range)
         page_obj, pagination = paginate_queryset(queryset, request)
 
         include_fields = parse_csv_param(request.query_params.get("include"))
