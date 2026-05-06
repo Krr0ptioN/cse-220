@@ -5,7 +5,7 @@ from rest_framework import serializers
 from api.serializers import DynamicFieldsModelSerializer
 from files.services import create_file_service
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
-
+from django.db import transaction
 
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
@@ -165,18 +165,17 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         categories = validated_data.pop("categories", [])
         opening_hours_data = validated_data.pop("opening_hours", [])
-        restaurant = Restaurant.objects.create(**validated_data)
+        with transaction.atomic():
+            restaurant = Restaurant.objects.create(**validated_data)
 
-        if categories:
-            restaurant.categories.set(categories)
-
-        if opening_hours_data:
-            OpeningHour.objects.bulk_create([
-                OpeningHour(restaurant=restaurant, **hour_data)
-                for hour_data in opening_hours_data
-            ])
-
-        return restaurant
+            if categories:
+                restaurant.categories.set(categories)
+            if opening_hours_data:
+                OpeningHour.objects.bulk_create([
+                    OpeningHour(restaurant=restaurant, **hour_data)
+                    for hour_data in opening_hours_data
+                ])
+            return restaurant
 
 
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
@@ -209,19 +208,19 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     def update(self, instance, validated_data):
         categories = validated_data.pop("categories", None)
         opening_hours_data = validated_data.pop("opening_hours", None)
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+            if categories is not None:
+                instance.categories.set(categories)
 
-        if categories is not None:
-            instance.categories.set(categories)
+            if opening_hours_data is not None:
+                instance.opening_hours.all().delete()
+                OpeningHour.objects.bulk_create([
+                    OpeningHour(restaurant=instance, **hour_data)
+                    for hour_data in opening_hours_data
+                ])
 
-        if opening_hours_data is not None:
-            instance.opening_hours.all().delete()
-            OpeningHour.objects.bulk_create([
-                OpeningHour(restaurant=instance, **hour_data)
-                for hour_data in opening_hours_data
-            ])
-
-        return instance
+            return instance

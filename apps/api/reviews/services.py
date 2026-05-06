@@ -76,9 +76,10 @@ class ReviewService:
                 code="forbidden",
                 detail="You can only edit your own reviews.",
             )
-        review = self.repository.save_review(review, data)
-        if review.parent is None:
-            self.repository.update_restaurant_aggregates(review.restaurant)
+        with transaction.atomic():
+            review = self.repository.save_review(review, data)
+            if review.parent_id is None:
+                self.repository.update_restaurant_aggregates(review.restaurant)
         return review
 
     def delete_review(self, *, user, review) -> None:
@@ -95,17 +96,17 @@ class ReviewService:
 
     def set_reaction(self, *, user, review, is_like: bool) -> dict[str, object]:
         existing = self.repository.get_reaction(review=review, user=user)
-        if existing is not None and existing.is_like == is_like:
-            user_reaction = "like" if is_like else "dislike"
-        else :
-            self.repository.set_reaction(review=review, user=user, is_like=is_like)
-            user_reaction = "like" if is_like else "dislike"
-        self.repository.update_reaction_counts(review)
+        with transaction.atomic():
+            if existing is None or existing.is_like != is_like :
+                self.repository.set_reaction(review=review, user=user, is_like=is_like)
+            self.repository.update_reaction_counts(review)
+        user_reaction = "like" if is_like else "dislike"
         return self._reaction_payload(review, user_reaction)
 
     def delete_reaction(self, *, user, review, is_like: bool) -> dict[str, object]:
-        self.repository.delete_reaction(review=review, user=user, is_like=is_like)
-        self.repository.update_reaction_counts(review)
+        with transaction.atomic():
+            self.repository.delete_reaction(review=review, user=user, is_like=is_like)
+            self.repository.update_reaction_counts(review)
         return self._reaction_payload(review, None)
 
     def _reaction_payload(self, review, user_reaction: str | None) -> dict[str, object]:
