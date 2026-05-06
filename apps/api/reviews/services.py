@@ -95,13 +95,9 @@ class ReviewService:
 
     def set_reaction(self, *, user, review, is_like: bool) -> dict[str, object]:
         existing = self.repository.get_reaction(review=review, user=user)
-        if existing is None:
-            self.repository.set_reaction(review=review, user=user, is_like=is_like)
+        if existing is not None and existing.is_like == is_like:
             user_reaction = "like" if is_like else "dislike"
-        elif existing.is_like == is_like:
-            self.repository.remove_reaction(review=review, user=user)
-            user_reaction = None
-        else:
+        else :
             self.repository.set_reaction(review=review, user=user, is_like=is_like)
             user_reaction = "like" if is_like else "dislike"
         self.repository.update_reaction_counts(review)
