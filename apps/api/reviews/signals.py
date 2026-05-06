@@ -8,12 +8,12 @@ from reviews.models import Review
 
 @receiver(post_save, sender=Review)
 def on_review_save(sender, instance, **kwargs):
-    if instance.parent is None:
+    if instance.parent_id is None:
         _update_restaurant_rating(instance.restaurant)
 
 @receiver(post_delete, sender=Review)
 def on_review_delete(sender, instance, **kwargs):
-    if instance.parent is None:
+    if instance.parent_id is None:
         _update_restaurant_rating(instance.restaurant)
 
 def _update_restaurant_rating(restaurant):
