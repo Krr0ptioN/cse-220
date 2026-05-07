@@ -15,6 +15,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     like_count = serializers.SerializerMethodField()
     dislike_count = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
+    user_reaction = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
@@ -30,6 +31,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "user",
+            "user_reaction",
         ]
 
     def get_like_count(self, obj) -> int:
@@ -45,6 +47,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         if obj.parent_id is not None:
             return None
         return ReviewReplySerializer(obj.replies.all(), many=True).data
+
+    def get_user_reaction(self, obj) -> str | None:
+        reactions = self.context.get("user_reactions", {})
+        return reactions.get(str(obj.id))
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

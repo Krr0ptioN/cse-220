@@ -48,10 +48,23 @@ class RestaurantReviewsController(APIView):
     def get(self, request, restaurant_slug):
         service = self.get_service()
         restaurant = service.get_restaurant(restaurant_slug)
-        queryset = service.list_restaurant_reviews(restaurant)
+        sort = request.query_params.get("sort", "recent")
+        queryset = service.list_restaurant_reviews(restaurant, sort=sort)
         page_obj, pagination = paginate_queryset(queryset, request)
-        return api_paginated(ReviewSerializer(page_obj.object_list, many=True).data, pagination)
+        user_reactions = {}
+        if request.user.is_authenticated:
+            user_reactions = service.repository.get_user_reactions_for_restaurant(
+                user=request.user, restaurant=restaurant
+            )
+        serializer = ReviewSerializer(
+            page_obj.object_list,
+            many=True,
+            context={"user_reactions": user_reactions},
+        )
+        return api_paginated(serializer.data, pagination)
 
+
+        
     def post(self, request, restaurant_slug):
         service = self.get_service()
         restaurant = service.get_restaurant(restaurant_slug)

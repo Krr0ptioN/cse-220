@@ -27,8 +27,8 @@ class ReviewService:
             raise ApiError(status_code=404, code="not_found", detail="Restaurant not found.")
         return restaurant
 
-    def list_restaurant_reviews(self, restaurant):
-        return self.repository.list_restaurant_reviews(restaurant)
+    def list_restaurant_reviews(self, restaurant, sort: str = "recent"):
+        return self.repository.list_restaurant_reviews(restaurant, sort=sort)
 
     def create_review(self, *, restaurant, user, data: dict):
         parent = None
@@ -94,9 +94,14 @@ class ReviewService:
             self.repository.update_restaurant_aggregates(restaurant)
 
     def set_reaction(self, *, user, review, is_like: bool) -> dict[str, object]:
-        self.repository.set_reaction(review=review, user=user, is_like=is_like)
+        existing = self.repository.get_reaction(review=review, user=user)
+        if existing is not None and existing.is_like == is_like:
+            user_reaction = "like" if is_like else "dislike"
+        else :
+            self.repository.set_reaction(review=review, user=user, is_like=is_like)
+            user_reaction = "like" if is_like else "dislike"
         self.repository.update_reaction_counts(review)
-        return self._reaction_payload(review, "like" if is_like else "dislike")
+        return self._reaction_payload(review, user_reaction)
 
     def delete_reaction(self, *, user, review, is_like: bool) -> dict[str, object]:
         self.repository.delete_reaction(review=review, user=user, is_like=is_like)
