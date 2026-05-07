@@ -165,10 +165,9 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         categories = validated_data.pop("categories", [])
         opening_hours_data = validated_data.pop("opening_hours", [])
+        primary_photo = validated_data.pop("primary_photo", None)
 
         with transaction.atomic():
-            primary_photo = validated_data.pop("primary_photo", None)
-
             restaurant = Restaurant.objects.create(**validated_data)
 
             if categories:
@@ -217,9 +216,9 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     def update(self, instance, validated_data):
         categories = validated_data.pop("categories", None)
         opening_hours_data = validated_data.pop("opening_hours", None)
+        primary_photo = validated_data.pop("primary_photo", None)
 
         with transaction.atomic():
-            primary_photo = validated_data.pop("primary_photo", None)
       
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
@@ -227,6 +226,9 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
 
             if categories is not None:
                 instance.categories.set(categories)
+
+            if primary_photo is not None:
+                self._set_primary_photo(instance, primary_photo)
 
             if opening_hours_data is not None:
                 instance.opening_hours.all().delete()
