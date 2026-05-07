@@ -96,7 +96,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 
     categories = CategorySerializer(many=True, read_only=True)
     opening_hours = OpeningHourSerializer(many=True, read_only=True)
-    logo_url = serializers.SerializerMethodField()
+    primary_photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
@@ -109,8 +109,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "website",
             "categories",
             "opening_hours",
-            "logo",
-            "logo_url",
+            "primary_photo_url",
             "address_line1",
             "address_line2",
             "city",
@@ -125,10 +124,10 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "updated_at",
         ]
 
-    def get_logo_url(self, obj) -> str | None:
-        if not obj.logo_id:
+    def get_primary_photo_url(self, obj) -> str | None:
+        if not obj.primary_photo_id:
             return None
-        return create_file_service().get_obfuscated_url(obj.logo_id)
+        return create_file_service().get_obfuscated_url(obj.primary_photo_id)
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
@@ -141,6 +140,7 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
         required=True,
     )
     opening_hours = OpeningHourSerializer(many=True, required=False)
+    primary_photo = serializers.ImageField(required=False, allow_null=True, write_only=True)
 
     class Meta:
         model = Restaurant
@@ -151,7 +151,7 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "website",
             "category_ids",
             "opening_hours",
-            "logo",
+            "primary_photo",
             "address_line1",
             "address_line2",
             "city",
@@ -165,17 +165,26 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         categories = validated_data.pop("categories", [])
         opening_hours_data = validated_data.pop("opening_hours", [])
+
         with transaction.atomic():
+            primary_photo = validated_data.pop("primary_photo", None)
+
             restaurant = Restaurant.objects.create(**validated_data)
 
             if categories:
                 restaurant.categories.set(categories)
+
             if opening_hours_data:
                 OpeningHour.objects.bulk_create([
                     OpeningHour(restaurant=restaurant, **hour_data)
                     for hour_data in opening_hours_data
                 ])
+            
+            if primary_photo is not None:
+                self._set_primary_photo(restaurant, primary_photo)
+
             return restaurant
+
 
 
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
@@ -202,13 +211,16 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "latitude": {"required": False},
             "longitude": {"required": False},
             "price_range": {"required": False},
-            "logo": {"required": False},
+            "primary_photo": {"required": False},
         }
 
     def update(self, instance, validated_data):
         categories = validated_data.pop("categories", None)
         opening_hours_data = validated_data.pop("opening_hours", None)
+
         with transaction.atomic():
+            primary_photo = validated_data.pop("primary_photo", None)
+      
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
@@ -224,3 +236,19 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
                 ])
 
             return instance
+
+    def _set_primary_photo(self, restaurant, uploaded_file) -> None:
+        file_service = create_file_service()
+        previous_photo_id = restaurant.primary_photo_id
+        stored_file_id, _ = file_service.save(
+            uploaded_file,
+            category="restaurants",
+            entity_id=str(restaurant.id),
+            content_type=getattr(uploaded_file, "content_type", "application/octet-stream"),
+        )
+        restaurant.primary_photo_id = stored_file_id
+        restaurant.save(update_fields=["primary_photo", "updated_at"])
+
+        if previous_photo_id and previous_photo_id != stored_file_id:
+            file_service.delete_by_id(previous_photo_id)
+
