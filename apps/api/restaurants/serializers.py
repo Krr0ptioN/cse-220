@@ -1,11 +1,11 @@
 """Restaurant serializers."""
 
+from django.db import transaction
 from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
 from files.services import create_file_service
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
-from django.db import transaction
 
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
@@ -175,17 +175,14 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
                 restaurant.categories.set(categories)
 
             if opening_hours_data:
-                OpeningHour.objects.bulk_create([
-                    OpeningHour(restaurant=restaurant, **hour_data)
-                    for hour_data in opening_hours_data
-                ])
-            
+                OpeningHour.objects.bulk_create(
+                    [OpeningHour(restaurant=restaurant, **hour_data) for hour_data in opening_hours_data]
+                )
+
             if primary_photo is not None:
                 self._set_primary_photo(restaurant, primary_photo)
 
             return restaurant
-
-
 
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     """Partial update serializer for restaurant edits."""
@@ -220,7 +217,7 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
 
         with transaction.atomic():
             primary_photo = validated_data.pop("primary_photo", None)
-      
+
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
@@ -230,10 +227,12 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
 
             if opening_hours_data is not None:
                 instance.opening_hours.all().delete()
-                OpeningHour.objects.bulk_create([
-                    OpeningHour(restaurant=instance, **hour_data)
-                    for hour_data in opening_hours_data
-                ])
+                OpeningHour.objects.bulk_create(
+                    [OpeningHour(restaurant=instance, **hour_data) for hour_data in opening_hours_data]
+                )
+
+            if primary_photo is not None:
+                self._set_primary_photo(instance, primary_photo)
 
             return instance
 
@@ -251,4 +250,3 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
 
         if previous_photo_id and previous_photo_id != stored_file_id:
             file_service.delete_by_id(previous_photo_id)
-

@@ -43,12 +43,12 @@ class ReviewService:
                     code="validation_error",
                     detail="Parent review belongs to a different restaurant.",
                 )
-            if parent.parent_id is not None :
+            if parent.parent_id is not None:
                 raise ApiError(
                     status_code=400,
                     code="validation_error",
                     detail="Replies to replies are not allowed.",
-                )   
+                )
 
         try:
             with transaction.atomic():
@@ -97,7 +97,7 @@ class ReviewService:
     def set_reaction(self, *, user, review, is_like: bool) -> dict[str, object]:
         existing = self.repository.get_reaction(review=review, user=user)
         with transaction.atomic():
-            if existing is None or existing.is_like != is_like :
+            if existing is None or existing.is_like != is_like:
                 self.repository.set_reaction(review=review, user=user, is_like=is_like)
             self.repository.update_reaction_counts(review)
         user_reaction = "like" if is_like else "dislike"

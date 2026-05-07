@@ -63,8 +63,6 @@ class RestaurantReviewsController(APIView):
         )
         return api_paginated(serializer.data, pagination)
 
-
-        
     def post(self, request, restaurant_slug):
         service = self.get_service()
         restaurant = service.get_restaurant(restaurant_slug)
@@ -119,7 +117,7 @@ class ReviewDislikeController(APIView):
         user = require_authenticated_user(request)
         review = service.get_review(review_id)
         return api_data(service.delete_reaction(user=user, review=review, is_like=False))
-    
+
 
 class ReviewRepliesController(APIView):
     """Create a reply to a review."""

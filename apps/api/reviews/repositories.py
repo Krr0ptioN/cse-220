@@ -20,7 +20,7 @@ class ReviewRepository:
             Review.objects.select_related("user", "restaurant")
             .annotate(
                 like_total=Count("reactions", filter=Q(reactions__is_like=True)),
-                dislike_total=Count("reactions", filter=Q(reactions__is_like=False)),   
+                dislike_total=Count("reactions", filter=Q(reactions__is_like=False)),
             )
             .order_by("created_at")
         )
@@ -35,7 +35,7 @@ class ReviewRepository:
                     - Count("reactions", filter=Q(reactions__is_like=False)),
             )
         )
-        if sort == "helpful" :
+        if sort == "helpful":
             queryset = queryset.order_by("-helpfulness", "-created_at")
         else:
             queryset = queryset.order_by("-created_at")
@@ -102,4 +102,7 @@ class ReviewRepository:
             review__parent__isnull=True,
             user=user,
         ).values("review_id", "is_like")
-        return {str(r["review_id"]): ("like" if r["is_like"] else "dislike") for r in reactions}
+        return {
+            str(r["review_id"]): ("like" if r["is_like"] else "dislike")
+            for r in reactions
+        }
