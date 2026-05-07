@@ -1,7 +1,7 @@
 """Restaurant application services."""
 
+from decimal import Decimal, InvalidOperation
 from django.db import transaction
-
 from api.exceptions import ApiError
 from files.services import create_file_service
 from restaurants.repositories import RestaurantRepository
@@ -17,8 +17,54 @@ class RestaurantService:
         self.repository = repository or self.repository_class()
         self.file_service = create_file_service()
 
-    def list_restaurants(self, sort: str | None = None):
-        return self.repository.list_restaurants(sort=sort)
+
+    def list_restaurants(self, filters: dict | None = None, sort: str | None = None):
+        normalized_filters = self._normalize_restaurant_filters(filters or {})
+        return self.repository.list_restaurants(filters=normalized_filters, sort=sort)
+
+    def _normalize_restaurant_filters(self, filters: dict) -> dict:
+        normalized: dict = {}
+
+        category = filters.get("category")
+        if category:
+            normalized["category"] = str(category).strip().lower()
+
+        city = filters.get("city")
+        if city:
+            normalized["city"] = str(city).strip()
+
+        price_range = filters.get("price_range") or filters.get("price")
+        if price_range:
+            price_range = str(price_range).strip()
+            if price_range not in {"1", "2", "3"}:
+                raise ApiError(
+                    status_code=400,
+                    code="invalid_filter",
+                    detail="price must be one of: 1, 2, 3.",
+                )
+            normalized["price_range"] = price_range
+
+        min_rating = filters.get("min_rating")
+        if min_rating not in (None, ""):
+            try:
+                min_rating_value = Decimal(str(min_rating))
+            except (InvalidOperation, ValueError):
+                raise ApiError(
+                    status_code=400,
+                    code="invalid_filter",
+                    detail="min_rating must be a number between 0 and 5.",
+                ) from None
+
+            if min_rating_value < 0 or min_rating_value > 5:
+                raise ApiError(
+                    status_code=400,
+                    code="invalid_filter",
+                    detail="min_rating must be a number between 0 and 5.",
+                )
+
+            normalized["min_rating"] = min_rating_value
+
+        return normalized
 
     def list_categories(self):
         return self.repository.list_categories()
