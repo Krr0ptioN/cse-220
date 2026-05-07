@@ -17,8 +17,8 @@ class RestaurantService:
         self.repository = repository or self.repository_class()
         self.file_service = create_file_service()
 
-    def list_restaurants(self):
-        return self.repository.list_restaurants()
+    def list_restaurants(self, sort: str | None = None):
+        return self.repository.list_restaurants(sort=sort)
 
     def list_categories(self):
         return self.repository.list_categories()
