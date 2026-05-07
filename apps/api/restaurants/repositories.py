@@ -1,7 +1,7 @@
 """Restaurant data access layer."""
 
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
-
+from django.db import transaction
 
 class RestaurantRepository:
     """Repository for restaurant persistence and queries."""
@@ -83,9 +83,10 @@ class RestaurantRepository:
         menu_item.delete()
 
     def set_opening_hours(self, restaurant, hours_data: list):
-        OpeningHour.objects.filter(restaurant=restaurant).delete()
-        hours = [
-            OpeningHour(restaurant=restaurant, **hour)
-            for hour in hours_data
-        ]
-        return OpeningHour.objects.bulk_create(hours)
+        with transaction.atomic(): 
+            OpeningHour.objects.filter(restaurant=restaurant).delete()
+            hours = [
+                OpeningHour(restaurant=restaurant, **hour)
+                for hour in hours_data
+            ]
+            return OpeningHour.objects.bulk_create(hours)

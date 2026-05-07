@@ -6,7 +6,6 @@ from api.serializers import DynamicFieldsModelSerializer
 from files.services import create_file_service
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
 
-
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
 
@@ -162,27 +161,6 @@ class RestaurantWriteSerializer(serializers.ModelSerializer):
             "price_range",
         ]
 
-    def create(self, validated_data):
-        categories = validated_data.pop("categories", [])
-        opening_hours_data = validated_data.pop("opening_hours", [])
-        primary_photo = validated_data.pop("primary_photo", None)
-        restaurant = Restaurant.objects.create(**validated_data)
-
-        if categories:
-            restaurant.categories.set(categories)
-
-        if opening_hours_data:
-            OpeningHour.objects.bulk_create([
-                OpeningHour(restaurant=restaurant, **hour_data)
-                for hour_data in opening_hours_data
-            ])
-
-        if primary_photo is not None:
-            self._set_primary_photo(restaurant, primary_photo)
-
-        return restaurant
-
-
 class RestaurantUpdateSerializer(RestaurantWriteSerializer):
     """Partial update serializer for restaurant edits."""
 
@@ -209,42 +187,3 @@ class RestaurantUpdateSerializer(RestaurantWriteSerializer):
             "price_range": {"required": False},
             "primary_photo": {"required": False},
         }
-
-    def update(self, instance, validated_data):
-        categories = validated_data.pop("categories", None)
-        opening_hours_data = validated_data.pop("opening_hours", None)
-        primary_photo = validated_data.pop("primary_photo", None)
-
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        if categories is not None:
-            instance.categories.set(categories)
-
-        if opening_hours_data is not None:
-            instance.opening_hours.all().delete()
-            OpeningHour.objects.bulk_create([
-                OpeningHour(restaurant=instance, **hour_data)
-                for hour_data in opening_hours_data
-            ])
-
-        if primary_photo is not None:
-            self._set_primary_photo(instance, primary_photo)
-
-        return instance
-
-    def _set_primary_photo(self, restaurant, uploaded_file) -> None:
-        file_service = create_file_service()
-        previous_photo_id = restaurant.primary_photo_id
-        stored_file_id, _ = file_service.save(
-            uploaded_file,
-            category="restaurants",
-            entity_id=str(restaurant.id),
-            content_type=getattr(uploaded_file, "content_type", "application/octet-stream"),
-        )
-        restaurant.primary_photo_id = stored_file_id
-        restaurant.save(update_fields=["primary_photo", "updated_at"])
-
-        if previous_photo_id and previous_photo_id != stored_file_id:
-            file_service.delete_by_id(previous_photo_id)
