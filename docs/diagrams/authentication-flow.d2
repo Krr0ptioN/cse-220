@@ -47,6 +47,14 @@ server: Django API {
       border-radius: 4
     }
   }
+
+  protected_view: "Protected\nAPI View" {
+    shape: rectangle
+    style: {
+      fill: "#E8F5E9"
+      border-radius: 4
+    }
+  }
 }
 
 # Database
@@ -104,7 +112,6 @@ request_label: "2. Authenticated Request" {
     fill: "#1565C0"
     font-size: 16
     bold: true
-    offset: 16
   }
 }
 
@@ -112,7 +119,6 @@ client -> server.permission: "GET /restaurants\nBearer {access_token}" {
   style: {
     stroke: "#1976D2"
     stroke-width: 2
-    offset: 2
   }
 }
 
@@ -123,7 +129,7 @@ server.permission -> server.jwt_service: "Validate token" {
   }
 }
 
-server.permission -> server: "Pass request with user" {
+server.permission -> server.protected_view: "Pass request with user" {
   style: {
     stroke: "#388E3C"
     stroke-width: 2
@@ -137,7 +143,6 @@ refresh_label: "3. Token Refresh" {
     fill: "#1565C0"
     font-size: 16
     bold: true
-    offset: 32
   }
 }
 
@@ -145,7 +150,6 @@ client -> server.auth_view: "POST /auth/refresh\n{refresh_token}" {
   style: {
     stroke: "#F57C00"
     stroke-width: 2
-    offset: 4
   }
 }
 

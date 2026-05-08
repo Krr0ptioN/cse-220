@@ -3,6 +3,8 @@
 
 direction: right
 
+*.style.font-size: 23
+
 # Users
 user: User {
   shape: sql_table
@@ -111,8 +113,8 @@ file: File {
   original_filename: varchar(255)
   content_type: varchar(100)
   size_bytes: int
-  width: int
-  height: int
+  image_width: int
+  image_height: int
   uploaded_by: uuid {constraint: foreign_key}
   created_at: timestamp
 }
@@ -138,21 +140,21 @@ favorite: Favorite {
 }
 
 # Relationships
-user ||--o{ restaurant: "owns"
-user ||--o{ review: "writes"
-user ||--o{ favorite: "has"
-user ||--o{ review_like: "gives"
-user ||--o{ file: "uploads"
+user -> restaurant: "owns (1:N)"
+user -> review: "writes (1:N)"
+user -> favorite: "has (1:N)"
+user -> review_like: "gives (1:N)"
+user -> file: "uploads (1:N)"
 
-category ||--o{ restaurant: "classifies"
+category -> restaurant: "classifies (1:N)"
 
-restaurant ||--o{ review: "receives"
-restaurant ||--o{ menu_item: "has"
-restaurant ||--o{ opening_hour: "has"
-restaurant ||--o{ restaurant_photo: "has"
-restaurant ||--o{ favorite: "is_in"
+restaurant -> review: "receives (1:N)"
+restaurant -> menu_item: "has (1:N)"
+restaurant -> opening_hour: "has (1:N)"
+restaurant -> restaurant_photo: "has (1:N)"
+restaurant -> favorite: "is in (1:N)"
 
-review ||--o{ review: "has_reply"
-review ||--o{ review_like: "receives"
+review -> review: "has reply (1:N)"
+review -> review_like: "receives (1:N)"
 
-restaurant_photo }o--|| file: "uses"
+restaurant_photo -> file: "uses (N:1)"
