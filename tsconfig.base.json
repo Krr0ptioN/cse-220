@@ -43,6 +43,10 @@
       "@flavor-map/ui-module-owner": ["libs/ui/modules/owner/src/index.ts"],
       "@flavor-map/ui-module-owner/server": [
         "libs/ui/modules/owner/src/server.ts"
+      ],
+      "@flavor-map/ui-module-auth": ["libs/ui/modules/auth/src/index.ts"],
+      "@flavor-map/ui-module-auth/server": [
+        "libs/ui/modules/auth/src/server.ts"
       ]
     }
   },

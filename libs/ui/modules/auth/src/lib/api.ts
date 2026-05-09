@@ -1,5 +1,5 @@
 import { API_ENDPOINTS, type User } from '@/lib/restaurants';
-import { normalizeApiError, type RegisterPayload } from './auth-flow';
+import { normalizeApiError, type RegisterPayload } from './flow';
 
 interface ApiEnvelope<T> {
   data?: T;
