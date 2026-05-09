@@ -1,5 +1,4 @@
 """Restaurant application services."""
-from uuid import UUID
 from restaurants.models import Favorite, Restaurant
 
 from collections import defaultdict

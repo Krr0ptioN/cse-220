@@ -1,8 +1,7 @@
 """Restaurant data access layer."""
 from restaurants.query_builder import RestaurantQueryBuilder
 
-from django.contrib.auth.models import User
-from restaurants.models import Category, Favorite, MenuItem, OpeningHour, Restaurant
+from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
 from django.db import transaction
 
 class RestaurantRepository:

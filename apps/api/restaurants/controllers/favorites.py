@@ -1,5 +1,4 @@
 from rest_framework.views import APIView
-from django.db.models import Exists, OuterRef
 from restaurants.services import RestaurantService
 from .common import pagination_and_filter_parameters
 from api.rest import (
@@ -10,7 +9,6 @@ from api.rest import (
     require_authenticated_user,
 )
 from restaurants.serializers import RestaurantSerializer
-from restaurants.models import Favorite
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
 
