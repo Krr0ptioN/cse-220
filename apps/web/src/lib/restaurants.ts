@@ -368,27 +368,29 @@ export function normalizeRestaurantPhotos(value: unknown): RestaurantPhoto[] {
     return [];
   }
 
-  return value
-    .map((item) => {
-      if (!item || typeof item !== 'object') {
-        return null;
-      }
+  const photos: RestaurantPhoto[] = [];
 
-      const candidate = item as Partial<RestaurantPhoto>;
-      if (!candidate.id || !candidate.url) {
-        return null;
-      }
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
 
-      return {
-        id: String(candidate.id),
-        url: resolveApiAssetUrl(candidate.url),
-        caption: candidate.caption,
-        sort_order: toNonNegativeInt(candidate.sort_order),
-        is_primary: Boolean(candidate.is_primary),
-        created_at: candidate.created_at,
-      };
-    })
-    .filter((item): item is RestaurantPhoto => item !== null);
+    const candidate = item as Partial<RestaurantPhoto>;
+    if (!candidate.id || !candidate.url) {
+      continue;
+    }
+
+    photos.push({
+      id: String(candidate.id),
+      url: resolveApiAssetUrl(candidate.url),
+      caption: candidate.caption,
+      sort_order: toNonNegativeInt(candidate.sort_order),
+      is_primary: Boolean(candidate.is_primary),
+      created_at: candidate.created_at,
+    });
+  }
+
+  return photos;
 }
 
 export function slugToTitle(slug: string): string {

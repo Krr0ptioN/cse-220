@@ -35,7 +35,6 @@ vi.mock('../_hooks/use-favorite-restaurant-mutation', () => ({
 }));
 
 import { RestaurantCard } from './restaurant-card';
-import { cn } from 'ui-common';
 
 describe('RestaurantCard', () => {
   beforeEach(() => {
