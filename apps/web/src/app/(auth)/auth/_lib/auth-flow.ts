@@ -22,7 +22,7 @@ export function destinationForRole(role: AuthRole | string | undefined): string 
     return '/owner/dashboard';
   }
 
-  return '/profile';
+  return '/restaurants';
 }
 
 export function roleForAuthVariant(variant: AuthVariant): 'user' | 'owner' {
