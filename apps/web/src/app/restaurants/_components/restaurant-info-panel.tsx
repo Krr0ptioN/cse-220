@@ -25,6 +25,7 @@ import {
 import {
   fetchRestaurantMenuItems,
   getRestaurantImageUrl,
+  getRestaurantPhotoUrls,
   type MenuItem,
   type Restaurant,
 } from '@/lib/restaurants';
@@ -32,6 +33,7 @@ import { fetchRestaurantReviews, type Review } from '@/lib/reviews';
 import { useFavoriteRestaurantMutation } from '../_hooks/use-favorite-restaurant-mutation';
 import { RestaurantHours } from './restaurant-hours';
 import { RestaurantMenuPreview } from './restaurant-menu-preview';
+import { RestaurantPhotoCarousel } from './restaurant-photo-carousel';
 import { ReviewSection } from './review-section';
 
 export function RestaurantInfoPanel({
@@ -55,6 +57,7 @@ export function RestaurantInfoPanel({
     toggleFavorite,
   } = useFavoriteRestaurantMutation(restaurant);
   const imageUrl = getRestaurantImageUrl(restaurant);
+  const photoUrls = getRestaurantPhotoUrls(restaurant);
   const categoryName =
     restaurant.category?.name ?? restaurant.categories?.[0]?.name ?? 'Restaurant';
 
@@ -91,10 +94,9 @@ export function RestaurantInfoPanel({
     <div className="min-h-full bg-background">
       <div className="relative">
         <AspectRatio ratio={16 / 9}>
-          <img
-            src={imageUrl}
+          <RestaurantPhotoCarousel
+            images={photoUrls.length ? photoUrls : [imageUrl]}
             alt={restaurant.name}
-            className="h-full w-full object-cover"
           />
         </AspectRatio>
         <Button

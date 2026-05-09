@@ -199,6 +199,63 @@ class RestaurantService:
     def list_menu_items(self, restaurant):
         return self.repository.list_menu_items(restaurant)
 
+    def list_photos(self, *, restaurant):
+        return self.repository.list_photos(restaurant)
+
+    def upload_photos(self, *, user, restaurant, uploaded_files):
+        self._require_menu_manager(user=user, restaurant=restaurant)
+        photos = []
+        next_sort_order = self.repository.list_photos(restaurant).count()
+
+        with transaction.atomic():
+            for index, uploaded_file in enumerate(uploaded_files):
+                stored_file_id, _ = self.file_service.save(
+                    uploaded_file,
+                    category="restaurants",
+                    entity_id=str(restaurant.id),
+                    content_type=getattr(uploaded_file, "content_type", "application/octet-stream"),
+                    generate_thumbnails=True,
+                )
+                photo = self.repository.create_photo(
+                    restaurant=restaurant,
+                    file_id=stored_file_id,
+                    sort_order=next_sort_order + index,
+                )
+                photos.append(photo)
+
+                if restaurant.primary_photo_id is None and index == 0:
+                    restaurant.primary_photo_id = stored_file_id
+                    restaurant.save(update_fields=["primary_photo", "updated_at"])
+
+        return photos
+
+    def set_primary_photo(self, *, user, restaurant, photo_id):
+        self._require_menu_manager(user=user, restaurant=restaurant)
+        photo = self.repository.get_photo(restaurant=restaurant, photo_id=photo_id)
+        if photo is None:
+            raise ApiError(status_code=404, code="not_found", detail="Photo not found.")
+
+        restaurant.primary_photo_id = photo.file_id
+        restaurant.save(update_fields=["primary_photo", "updated_at"])
+        return restaurant
+
+    def delete_photo(self, *, user, restaurant, photo_id) -> None:
+        self._require_menu_manager(user=user, restaurant=restaurant)
+        photo = self.repository.get_photo(restaurant=restaurant, photo_id=photo_id)
+        if photo is None:
+            raise ApiError(status_code=404, code="not_found", detail="Photo not found.")
+
+        file_id = photo.file_id
+        was_primary = restaurant.primary_photo_id == file_id
+        self.repository.delete_photo(photo)
+
+        if was_primary:
+            next_photo = self.repository.list_photos(restaurant).first()
+            restaurant.primary_photo_id = next_photo.file_id if next_photo else None
+            restaurant.save(update_fields=["primary_photo", "updated_at"])
+
+        self.file_service.delete_by_id(file_id)
+
     def get_menu_item(self, *, restaurant, menu_item_id):
         menu_item = self.repository.get_menu_item(
             restaurant=restaurant,

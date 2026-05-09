@@ -8,10 +8,12 @@ import {
 } from '@remixicon/react';
 import {
   getRestaurantImageUrl,
+  getRestaurantPhotoUrls,
   getRestaurantDistanceKm,
   type Restaurant,
 } from '@/lib/restaurants';
 import { RestaurantHours } from './restaurant-hours';
+import { RestaurantPhotoCarousel } from './restaurant-photo-carousel';
 
 interface RestaurantListItemProps {
   restaurant: Restaurant;
@@ -29,6 +31,7 @@ export function RestaurantListItem({
   onSelect,
 }: RestaurantListItemProps) {
   const imageUrl = getRestaurantImageUrl(restaurant);
+  const photoUrls = getRestaurantPhotoUrls(restaurant);
   const distanceKm = getRestaurantDistanceKm(restaurant.slug);
   const categoryName =
     restaurant.category?.name ?? restaurant.categories?.[0]?.name ?? 'Restaurant';
@@ -47,11 +50,11 @@ export function RestaurantListItem({
     >
       <div className="flex">
         <div className="relative h-28 w-28 shrink-0 overflow-hidden">
-          <img
-            src={imageUrl}
+          <RestaurantPhotoCarousel
+            images={photoUrls.length ? photoUrls : [imageUrl]}
             alt={restaurant.name}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            loading="lazy"
+            showLightbox={false}
+            imageClassName="transition-transform duration-300 group-hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-transparent to-card/30" />
         </div>

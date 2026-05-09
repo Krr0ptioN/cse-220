@@ -20,6 +20,7 @@ export type RestaurantFormValues = {
   priceRange: string;
   primaryPhotoFile: File | null;
   primaryPhotoUrl: string;
+  galleryPhotoFiles: File[];
   openingHours: OpeningHourFormValues[];
 };
 
@@ -36,6 +37,7 @@ export function emptyRestaurantFormValues(): RestaurantFormValues {
     priceRange: '2',
     primaryPhotoFile: null,
     primaryPhotoUrl: '',
+    galleryPhotoFiles: [],
     openingHours: emptyOpeningHoursFormValues(),
   };
 }
@@ -79,6 +81,7 @@ export function restaurantToFormValues(
     priceRange: restaurant.price_range ?? '2',
     primaryPhotoFile: null,
     primaryPhotoUrl: resolveApiAssetUrl(restaurant.primary_photo_url),
+    galleryPhotoFiles: [],
     openingHours: defaultOpeningHours.map((fallback) => {
       const hour = openingHoursByDay.get(fallback.dayOfWeek);
 

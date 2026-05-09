@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('ui-common', () => ({
+  cn: (...classes: Array<string | false | null | undefined>) =>
+    classes.filter(Boolean).join(' '),
   AspectRatio: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -23,6 +25,7 @@ vi.mock('ui-common', () => ({
 
 vi.mock('@/lib/restaurants', () => ({
   getRestaurantImageUrl: () => 'https://example.com/restaurant.jpg',
+  getRestaurantPhotoUrls: () => [],
   getRestaurantDistanceKm: () => 1.2,
   getRestaurantIsOpen: () => true,
 }));
@@ -32,6 +35,7 @@ vi.mock('../_hooks/use-favorite-restaurant-mutation', () => ({
 }));
 
 import { RestaurantCard } from './restaurant-card';
+import { cn } from 'ui-common';
 
 describe('RestaurantCard', () => {
   beforeEach(() => {
