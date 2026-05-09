@@ -1,8 +1,8 @@
 import 'ui-common/styles/global.css';
-import { cn, ThemeProvider } from 'ui-common';
+import { cn } from 'ui-common';
 import { Metadata } from 'next';
-
 import { Navigation } from './_components/navigation';
+import { Providers } from './providers';
 
 export const metadata: Metadata = {
   title: 'Flavor Map',
@@ -16,11 +16,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={cn('font-sans')}>
-      <body className="bg-background text-foreground antialiased">
-        <ThemeProvider>
+      <body className="antialiased">
+        <Providers>
           <Navigation />
           {children}
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );

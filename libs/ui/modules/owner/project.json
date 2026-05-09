@@ -1,0 +1,9 @@
+{
+  "name": "ui-module-owner",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/ui/modules/owner/src",
+  "projectType": "library",
+  "tags": [],
+  "// targets": "to see all targets run: nx show project ui-module-owner --web",
+  "targets": {}
+}

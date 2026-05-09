@@ -20,7 +20,10 @@ export default [
         'error',
         {
           enforceBuildableLibDependency: true,
-          allow: ['^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$', '^ui-common(\\/.*)?$'],
+          allow: [
+            '^.*/eslint(\\.base)?\\.config\\.[cm]?[jt]s$',
+            '^ui-common(\\/.*)?$',
+          ],
           depConstraints: [
             {
               sourceTag: '*',

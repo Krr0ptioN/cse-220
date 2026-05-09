@@ -1,10 +1,9 @@
-# Component Architecture
-# Next.js Frontend Structure
+# Frontend Architecture
+# Next.js route composition and runtime dependencies
 
-direction: right
+direction: down
 
-# App Router
-app: App Router {
+routes: "App Router Routes" {
   shape: rectangle
   style: {
     fill: "#E3F2FD"
@@ -13,145 +12,56 @@ app: App Router {
     border-radius: 8
   }
 
-  layout: "Root Layout" {
+  public: "Public Discovery\n/, /search, /map" {
     shape: rectangle
     style: {
       fill: "#BBDEFB"
+      stroke: "#1565C0"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
+      bold: true
     }
   }
 
-  home: "Home Page\n/" {
+  restaurant: "Restaurant Detail\n/restaurants\n/[slug], /menu, /reviews" {
     shape: rectangle
     style: {
       fill: "#BBDEFB"
+      stroke: "#1565C0"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
+      bold: true
     }
   }
 
-  restaurants: "Restaurant Routes" {
+  account: "Account Flows\n/auth/login, /auth/register\n/profile, favorites, reviews" {
     shape: rectangle
     style: {
       fill: "#BBDEFB"
+      stroke: "#1565C0"
+      stroke-width: 2
       border-radius: 4
-    }
-
-    list: "/restaurants" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-
-    detail: "/restaurants/[slug]" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-
-    menu: "/restaurants/[slug]/menu" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-
-    reviews: "/restaurants/[slug]/reviews" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
+      font-size: 18
+      bold: true
     }
   }
 
-  search: "/search" {
+  owner: "Owner Dashboard\n/owner/dashboard\nrestaurants, replies, analytics" {
     shape: rectangle
     style: {
       fill: "#BBDEFB"
+      stroke: "#1565C0"
+      stroke-width: 2
       border-radius: 4
-    }
-  }
-
-  map: "/map" {
-    shape: rectangle
-    style: {
-      fill: "#BBDEFB"
-      border-radius: 4
-    }
-  }
-
-  profile: "Profile Routes" {
-    shape: rectangle
-    style: {
-      fill: "#BBDEFB"
-      border-radius: 4
-    }
-
-    me: "/profile" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-
-    favorites: "/profile/favorites" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-
-    my_reviews: "/profile/reviews" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-  }
-
-  auth: "Auth Routes" {
-    shape: rectangle
-    style: {
-      fill: "#BBDEFB"
-      border-radius: 4
-    }
-
-    login: "/auth/login" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-
-    register: "/auth/register" {
-      shape: rectangle
-      style: {
-        fill: "#E3F2FD"
-        border-radius: 4
-      }
-    }
-  }
-
-  owner: "Owner Dashboard\n/owner/dashboard" {
-    shape: rectangle
-    style: {
-      fill: "#BBDEFB"
-      border-radius: 4
+      font-size: 18
+      bold: true
     }
   }
 }
 
-# Components
-components: Components {
+components: "UI Composition" {
   shape: rectangle
   style: {
     fill: "#C8E6C9"
@@ -160,49 +70,42 @@ components: Components {
     border-radius: 8
   }
 
-  ui: "UI Components\n(Button, Card,\nInput, Modal,\nStarRating)" {
+  primitives: "Shared Primitives\nButton, Card, Input,\nModal, StarRating" {
     shape: rectangle
     style: {
       fill: "#E8F5E9"
+      stroke: "#388E3C"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
     }
   }
 
-  restaurant: "Restaurant\n(RestaurantCard,\nRestaurantGrid,\nFilters)" {
+  feature_ui: "Feature Components\nRestaurantCard, filters,\nReviewCard, ReviewForm, MapView" {
     shape: rectangle
     style: {
       fill: "#E8F5E9"
+      stroke: "#388E3C"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
+      bold: true
     }
   }
 
-  review: "Review\n(ReviewCard,\nReviewForm,\nReviewList)" {
+  owner_ui: "Owner Surfaces\nlisting editor,\nreview replies,\nanalytics charts" {
     shape: rectangle
     style: {
       fill: "#E8F5E9"
+      stroke: "#388E3C"
+      stroke-width: 2
       border-radius: 4
-    }
-  }
-
-  map: "Map\n(MapView,\nMapMarker,\nCluster)" {
-    shape: rectangle
-    style: {
-      fill: "#E8F5E9"
-      border-radius: 4
-    }
-  }
-
-  layout: "Layout\n(Header,\nFooter,\nSidebar)" {
-    shape: rectangle
-    style: {
-      fill: "#E8F5E9"
-      border-radius: 4
+      font-size: 18
     }
   }
 }
 
-# Services
-services: Services {
+runtime: "Client Runtime" {
   shape: rectangle
   style: {
     fill: "#FFF9C4"
@@ -211,80 +114,53 @@ services: Services {
     border-radius: 8
   }
 
-  api: "API Client\n(axios + interceptors)" {
+  api_client: "API Client\nfetch wrappers,\nerror handling,\nresponse normalization" {
     shape: rectangle
     style: {
       fill: "#FFFDE7"
+      stroke: "#F9A825"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
+      bold: true
     }
   }
 
-  auth: "Auth Service\n(token management)" {
+  auth_service: "Auth Service\nrole-aware redirects,\ntoken/session state" {
     shape: rectangle
     style: {
       fill: "#FFFDE7"
+      stroke: "#F9A825"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
     }
   }
 
-  search: "Search Service" {
+  stores: "Local Stores\nuser, filters,\nselected restaurant, UI state" {
     shape: rectangle
     style: {
       fill: "#FFFDE7"
+      stroke: "#F9A825"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
     }
   }
 }
 
-# State
-state: Stores {
-  shape: rectangle
-  style: {
-    fill: "#F3E5F5"
-    stroke: "#7B1FA2"
-    stroke-width: 2
-    border-radius: 8
-  }
-
-  auth_store: "AuthStore\n(user, tokens)" {
-    shape: rectangle
-    style: {
-      fill: "#EDE7F6"
-      border-radius: 4
-    }
-  }
-
-  ui_store: "UIStore\n(filters, search)" {
-    shape: rectangle
-    style: {
-      fill: "#EDE7F6"
-      border-radius: 4
-    }
-  }
-}
-
-# Backend
-backend: Django API {
+backend: "Django API\nREST endpoints for restaurants,\nreviews, files, owner analytics" {
   shape: rectangle
   style: {
     fill: "#FFECB3"
     stroke: "#F57C00"
     stroke-width: 2
     border-radius: 8
-  }
-
-  endpoints: "REST Endpoints" {
-    shape: rectangle
-    style: {
-      fill: "#FFF8E1"
-      border-radius: 4
-    }
+    font-size: 20
+    bold: true
   }
 }
 
-# Connections
-app -> components: "Renders"
-components -> services: "Uses"
-services -> state: "Reads/Writes"
-services.api -> backend: "REST API"
-services.auth -> state.auth_store: "Manages tokens"
+routes -> components: "compose pages"
+components -> runtime: "load data and submit actions"
+runtime -> backend: "REST JSON"

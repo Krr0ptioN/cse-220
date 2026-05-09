@@ -4,28 +4,18 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { startTransition, useEffect, useState, type ComponentType } from 'react';
 import {
-  Avatar,
-  AvatarFallback,
   Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
   Spinner,
   cn,
 } from 'ui-common';
 import {
-  RiDashboardLine,
-  RiLogoutBoxLine,
   RiRestaurant2Line,
   RiStore2Line,
 } from '@remixicon/react';
 
 import { logoutUser, getCurrentUser } from '@/app/(auth)/auth/_lib/auth-api';
-import { destinationForRole } from '@/app/(auth)/auth/_lib/auth-flow';
 import { type User } from '@/lib/restaurants';
+import { AccountMenu } from './account-menu';
 
 type NavLink = {
   href: string;
@@ -85,6 +75,29 @@ export function Navigation() {
       cancelled = true;
     };
   }, [pathname]);
+
+  useEffect(() => {
+    function handleProfileUpdated(event: Event) {
+      const updatedProfile = (event as CustomEvent<Partial<User>>).detail;
+
+      setUser((currentUser) => {
+        if (!currentUser || (updatedProfile.id && updatedProfile.id !== currentUser.id)) {
+          return currentUser;
+        }
+
+        return {
+          ...currentUser,
+          ...updatedProfile,
+        };
+      });
+    }
+
+    window.addEventListener('flavormap:profile-updated', handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener('flavormap:profile-updated', handleProfileUpdated);
+    };
+  }, []);
 
   if (pathname.startsWith('/owner/dashboard') || pathname.startsWith('/auth') || pathname.startsWith('/business')) {
     return null;
@@ -197,82 +210,6 @@ function HeaderLink({
   );
 }
 
-function AccountMenu({
-  user,
-  displayName,
-  roleLabel,
-  onNavigate,
-  onSignOut,
-  isSigningOut,
-}: {
-  user: User;
-  displayName: string | null;
-  roleLabel: string | null;
-  onNavigate: (href: string) => void;
-  onSignOut: () => Promise<void>;
-  isSigningOut: boolean;
-}) {
-  const initials = getInitials(displayName || user.username || user.email);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          className="h-auto gap-3 rounded-full border border-border/70 px-3 py-2 text-left shadow-sm hover:bg-background"
-        >
-          <Avatar size="sm">
-            <AvatarFallback className="bg-muted text-xs font-semibold text-foreground">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <span className="hidden min-w-0 sm:block">
-            <span className="block truncate text-sm font-medium text-foreground">
-              {displayName}
-            </span>
-            <span className="block truncate text-[11px] text-muted-foreground">
-              {roleLabel}
-            </span>
-          </span>
-        </Button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium text-foreground">{displayName}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => onNavigate('/restaurants')}>
-          <RiRestaurant2Line className="size-4" aria-hidden="true" />
-          Restaurants
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onSelect={() =>
-            onNavigate(user.role === 'owner' ? '/owner/dashboard' : destinationForRole(user.role))
-          }
-        >
-          <RiDashboardLine className="size-4" aria-hidden="true" />
-          {user.role === 'owner' ? 'Owner dashboard' : 'My restaurants'}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onSelect={(event) => {
-            event.preventDefault();
-            void onSignOut();
-          }}
-          disabled={isSigningOut}
-        >
-          <RiLogoutBoxLine className="size-4" aria-hidden="true" />
-          {isSigningOut ? 'Signing out...' : 'Sign out'}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 function isActive(pathname: string, href: string): boolean {
   if (href === '/restaurants' && pathname.startsWith('/restaurants')) {
@@ -280,16 +217,4 @@ function isActive(pathname: string, href: string): boolean {
   }
 
   return pathname === href;
-}
-
-function getInitials(value: string): string {
-  return (
-    value
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? '')
-      .join('')
-      .slice(0, 2) || 'FM'
-  );
 }

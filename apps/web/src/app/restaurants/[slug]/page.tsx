@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { AspectRatio, Badge, Card, CardContent, CardHeader } from 'ui-common';
 import {
   RiArrowLeftLine,
@@ -12,13 +13,17 @@ import {
 
 import {
   fetchRestaurantDetail,
+  fetchRestaurantMenuItems,
   getRestaurantCoverImage,
   getRestaurantImageUrl,
   getRestaurantDistanceKm,
-  getRestaurantIsOpen,
+  getRestaurantStatus,
   slugToTitle,
 } from '@/lib/restaurants';
 import { fetchRestaurantReviews } from '@/lib/reviews';
+import { RestaurantFavoriteButton } from '../_components/restaurant-favorite-button';
+import { RestaurantHours } from '../_components/restaurant-hours';
+import { RestaurantMenuPreview } from '../_components/restaurant-menu-preview';
 import { ReviewSection } from '../_components/review-section';
 
 type RestaurantDetailPageProps = {
@@ -29,15 +34,18 @@ export default async function RestaurantDetailPage({
   params,
 }: RestaurantDetailPageProps) {
   const { slug } = await params;
-  const [restaurant, reviewsResponse] = await Promise.all([
-    fetchRestaurantDetail(slug),
+  const requestHeaders = await headers();
+  const cookieHeader = requestHeaders.get('cookie');
+  const [restaurant, reviewsResponse, menuItems] = await Promise.all([
+    fetchRestaurantDetail(slug, cookieHeader),
     fetchRestaurantReviews(slug),
+    fetchRestaurantMenuItems(slug),
   ]);
 
   const displayName = restaurant?.name || slugToTitle(slug);
   const imageUrl = restaurant ? getRestaurantImageUrl(restaurant) : getRestaurantCoverImage(slug);
   const distanceKm = getRestaurantDistanceKm(slug);
-  const isOpen = getRestaurantIsOpen(slug);
+  const status = restaurant ? getRestaurantStatus(restaurant.opening_hours) : null;
 
   return (
     <main className="min-h-screen bg-background">
@@ -67,10 +75,14 @@ export default async function RestaurantDetailPage({
             </h1>
             <Badge
               variant="secondary"
-              className={`shrink-0 text-xs ${isOpen ? 'bg-green-500/90 text-white' : 'bg-white/20 text-white/80'}`}
+              className={`shrink-0 text-xs ${
+                status?.state === 'open' || status?.state === 'closing-soon'
+                  ? 'bg-green-500/90 text-white'
+                  : 'bg-white/20 text-white/80'
+              }`}
             >
               <RiTimeLine className="mr-1 size-3" />
-              {isOpen ? 'Open now' : 'Closed'}
+              {status?.label ?? 'Hours unavailable'}
             </Badge>
           </div>
 
@@ -86,13 +98,22 @@ export default async function RestaurantDetailPage({
             </span>
             {restaurant?.category?.name && (
               <span className="text-white/70">
-                • {restaurant.category.name}
+                - {restaurant.category.name}
               </span>
             )}
             <span className="text-white/60">
-              • {distanceKm.toFixed(1)} km away
+              - {distanceKm.toFixed(1)} km away
             </span>
           </div>
+          {restaurant && (
+            <div className="mt-4">
+              <RestaurantFavoriteButton
+                restaurantSlug={restaurant.slug}
+                initialIsFavorite={Boolean(restaurant.is_favorite)}
+                initialFavoriteCount={restaurant.favorite_count ?? 0}
+              />
+            </div>
+          )}
         </div>
       </section>
 
@@ -111,6 +132,11 @@ export default async function RestaurantDetailPage({
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2">
+                {restaurant?.opening_hours && (
+                  <div className="sm:col-span-2">
+                    <RestaurantHours openingHours={restaurant.opening_hours} />
+                  </div>
+                )}
                 {restaurant?.address_line1 && (
                   <div className="flex items-start gap-2 text-sm">
                     <RiMapPinLine className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -200,14 +226,40 @@ export default async function RestaurantDetailPage({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Status</span>
                 <span
-                  className={`font-medium ${isOpen ? 'text-green-600' : 'text-muted-foreground'}`}
+                  className={`font-medium ${
+                    status?.state === 'open' || status?.state === 'closing-soon'
+                      ? 'text-green-600'
+                      : 'text-muted-foreground'
+                  }`}
                 >
-                  {isOpen ? 'Open' : 'Closed'}
+                  {status?.label ?? 'Unknown'}
                 </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Favorites</span>
+                <span className="font-medium">{restaurant?.favorite_count ?? 0}</span>
               </div>
             </CardContent>
           </Card>
         </div>
+      </section>
+
+      {/* Menu */}
+      <section className="mx-auto max-w-5xl px-4 pb-8 sm:px-6">
+        <Card>
+          <CardHeader className="flex flex-col gap-3 border-b border-border/70 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Menu</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Current dishes and specials shared by the restaurant.
+              </p>
+            </div>
+            <Badge variant="secondary">{menuItems.length} items</Badge>
+          </CardHeader>
+          <CardContent className="pt-5">
+            <RestaurantMenuPreview menuItems={menuItems} />
+          </CardContent>
+        </Card>
       </section>
 
       {/* Reviews */}

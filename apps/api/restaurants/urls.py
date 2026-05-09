@@ -1,16 +1,38 @@
 from django.urls import path
 
-from reviews.views import RestaurantReviewsController
 from restaurants.views import (
+    OwnerDashboardController,
     OwnerRestaurantsController,
     RestaurantDetailController,
     RestaurantMenuItemDetailController,
     RestaurantMenuItemsController,
-    RestaurantsController,
+    RestaurantsController
 )
+
+from reviews.views import RestaurantReviewsController
+
+from .controllers import (
+    ReviewerFavoriteRestaurantListController,
+    ReviewerFavoriteRestaurantController
+) 
 
 urlpatterns = [
     path("", RestaurantsController.as_view(), name="restaurants-list"),
+    path(
+        "favorites/",
+        ReviewerFavoriteRestaurantListController.as_view(),
+        name="reviewer-favorite-restaurants-list",
+    ),
+    path(
+        "<slug:restaurant_slug>/favorite/",
+        ReviewerFavoriteRestaurantController.as_view(),
+        name="reviewer-restaurant-favorite",
+    ),
+    path(
+        "mine/dashboard/",
+        OwnerDashboardController.as_view(),
+        name="restaurants-mine-dashboard",
+    ),
     path("mine/", OwnerRestaurantsController.as_view(), name="restaurants-mine"),
     path(
         "<slug:restaurant_slug>/menu-items/",
@@ -27,5 +49,9 @@ urlpatterns = [
         RestaurantReviewsController.as_view(),
         name="restaurants-reviews",
     ),
-    path("<slug:slug>/", RestaurantDetailController.as_view(), name="restaurants-detail"),
+    path(
+        "<slug:slug>/", 
+        RestaurantDetailController.as_view(),
+        name="restaurants-detail"
+    ),
 ]

@@ -16,7 +16,6 @@ import {
   Separator,
 } from 'ui-common';
 import {
-  RiArrowRightLine,
   RiCompassDiscoverLine,
   RiShieldUserLine,
   RiStore2Line,

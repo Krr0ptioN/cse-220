@@ -1,21 +1,21 @@
 export type AuthVariant = 'reviewer' | 'business';
 export type AuthRole = 'user' | 'reviewer' | 'owner' | 'admin';
 
-export type RegisterFormInput = {
+export interface RegisterFormInput {
   email: string;
   password: string;
   displayName: string;
   variant: AuthVariant;
   username?: string;
-};
+}
 
-export type RegisterPayload = {
+export interface RegisterPayload {
   email: string;
   username: string;
   password: string;
   display_name: string;
   role: 'user' | 'owner';
-};
+}
 
 export function destinationForRole(role: AuthRole | string | undefined): string {
   if (role === 'owner') {

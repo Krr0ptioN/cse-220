@@ -89,7 +89,11 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
       try {
         const response = await fetch(
           buildRestaurantsUrl(page, DEFAULT_PAGE_SIZE, query),
-          { cache: 'no-store', signal: controller.signal },
+          {
+            cache: 'no-store',
+            credentials: 'include',
+            signal: controller.signal,
+          },
         );
 
         if (!response.ok) {
@@ -98,8 +102,39 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
 
         const payload = (await response.json()) as unknown;
         const normalized = normalizeRestaurantsResponse(payload);
+        const previousRestaurants = useExploreStore.getState().restaurants;
+        const mergedFavorites = normalized.data.map((restaurant) => {
+          const existing = previousRestaurants.find(
+            (item) => item.slug === restaurant.slug,
+          );
 
-        const locallyFiltered = applyLocalFilter(normalized.data, query);
+          if (!existing) {
+            return restaurant;
+          }
+
+          return {
+            ...restaurant,
+            is_favorite:
+              typeof existing.is_favorite === 'boolean'
+                ? existing.is_favorite
+                : restaurant.is_favorite,
+            favorite_count:
+              typeof existing.favorite_count === 'number'
+                ? existing.favorite_count
+                : restaurant.favorite_count,
+            favorite_score:
+              typeof existing.favorite_score === 'number'
+                ? existing.favorite_score
+                : restaurant.favorite_score,
+            last_favorited_at:
+              typeof existing.last_favorited_at === 'string' ||
+              existing.last_favorited_at === null
+                ? existing.last_favorited_at
+                : restaurant.last_favorited_at,
+          };
+        });
+
+        const locallyFiltered = applyLocalFilter(mergedFavorites, query);
         const clientFiltered = applyClientFilters(
           locallyFiltered,
           filters.price,

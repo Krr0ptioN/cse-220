@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import type { Restaurant } from '@/lib/restaurants';
 
 import { useRestaurantData } from '../_hooks/use-restaurant-data';
 import { useExploreStore, useExploreUI } from '../_stores/explore-store';
@@ -34,8 +33,7 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
   } = useRestaurantData(initialQuery, initialPage);
 
   const { showFilters, showListMobile, hoveredId } = useExploreUI();
-  const [selectedRestaurant, setSelectedRestaurant] =
-    useState<Restaurant | null>(null);
+  const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState<string | null>(null);
   const {
     setInputValue,
     setPriceFilter,
@@ -98,6 +96,11 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
   );
 
   const isLoading = useExploreStore((s) => s.isLoading);
+  const selectedRestaurant = useMemo(
+    () =>
+      restaurants.find((restaurant) => restaurant.slug === selectedRestaurantSlug) ?? null,
+    [restaurants, selectedRestaurantSlug],
+  );
 
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-background">
@@ -112,7 +115,7 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
             hoveredId={hoveredId}
             selectedId={selectedRestaurant?.id ?? null}
             onHover={setHoveredId}
-            onSelect={setSelectedRestaurant}
+            onSelect={(restaurant) => setSelectedRestaurantSlug(restaurant.slug)}
             query={query}
           />
 
@@ -150,13 +153,13 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
           isLoading={isLoading}
           hoveredId={hoveredId}
           onHover={setHoveredId}
-          onSelect={setSelectedRestaurant}
+          onSelect={(restaurant) => setSelectedRestaurantSlug(restaurant.slug)}
           onPageChange={handlePageChange}
         />
 
         <SelectedRestaurantReviews
           restaurant={selectedRestaurant}
-          onClose={() => setSelectedRestaurant(null)}
+          onClose={() => setSelectedRestaurantSlug(null)}
         />
       </div>
     </div>

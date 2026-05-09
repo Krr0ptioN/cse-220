@@ -2,12 +2,19 @@
 
 from django.contrib.auth import authenticate, login, logout
 from django.middleware.csrf import get_token
+from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from api.exceptions import ApiError
 from api.rest import api_data, require_authenticated_user
-from users.serializers import LoginSerializer, RegisterSerializer, UserPublicSerializer
+from users.serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    UserAvatarUploadSerializer,
+    UserProfileUpdateSerializer,
+    UserPublicSerializer,
+)
 from users.services import UserService
 
 
@@ -22,6 +29,36 @@ class UsersController(APIView):
     def get(self, request):
         user = require_authenticated_user(request)
         return api_data(self.get_service().me(user))
+
+    def patch(self, request):
+        user = require_authenticated_user(request)
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated_user = self.get_service().update_profile(
+            user,
+            serializer.validated_data,
+        )
+        return api_data(UserPublicSerializer(updated_user).data)
+
+
+class UserAvatarController(APIView):
+    """Upload and attach the current user's profile avatar."""
+
+    parser_classes = [MultiPartParser, FormParser]
+    service_class = UserService
+
+    def get_service(self) -> UserService:
+        return self.service_class()
+
+    def post(self, request):
+        user = require_authenticated_user(request)
+        serializer = UserAvatarUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        updated_user = self.get_service().update_avatar(
+            user,
+            serializer.validated_data["avatar"],
+        )
+        return api_data(UserPublicSerializer(updated_user).data)
 
 
 class CsrfController(APIView):

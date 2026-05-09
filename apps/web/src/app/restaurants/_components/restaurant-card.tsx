@@ -1,10 +1,14 @@
+'use client';
+
 import Link from 'next/link';
+import React from 'react';
 import { AspectRatio, Badge, Card, CardContent, Button } from 'ui-common';
 import {
   RiMapPinLine,
   RiRouteLine,
   RiStarFill,
-  RiBookmarkLine,
+  RiHeartFill,
+  RiHeartLine,
   RiTimeLine,
 } from '@remixicon/react';
 
@@ -14,6 +18,7 @@ import {
   getRestaurantIsOpen,
   type Restaurant,
 } from '@/lib/restaurants';
+import { useFavoriteRestaurantMutation } from '../_hooks/use-favorite-restaurant-mutation';
 
 type RestaurantCardProps = {
   restaurant: Restaurant;
@@ -23,6 +28,15 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   const imageUrl = getRestaurantImageUrl(restaurant);
   const distanceKm = getRestaurantDistanceKm(restaurant.slug);
   const isOpen = getRestaurantIsOpen(restaurant.slug);
+  const {
+    isLoading,
+    canFavorite,
+    isSaving,
+    isLocked,
+    isFavorite,
+    favoriteCount,
+    toggleFavorite,
+  } = useFavoriteRestaurantMutation(restaurant);
 
   return (
     <Card className="group overflow-hidden border-border/70 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
@@ -36,13 +50,36 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
           />
         </AspectRatio>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-        <button
-          type="button"
-          aria-label="Save restaurant"
-          className="absolute top-3 right-3 inline-flex size-8 items-center justify-center rounded-full border border-white/60 bg-white/80 text-foreground/90 backdrop-blur transition-colors hover:bg-white"
-        >
-          <RiBookmarkLine className="size-4" />
-        </button>
+        {!isLoading && !canFavorite ? (
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="absolute right-3 top-3 h-auto rounded-full border-white/60 bg-white/80 px-2.5 py-1 text-xs font-medium text-foreground/90 backdrop-blur hover:bg-white"
+          >
+            <Link href="/auth/sign-in">
+              <RiHeartLine className="size-4" />
+              <span>Sign in to favorite</span>
+              <span className="text-muted-foreground">({favoriteCount})</span>
+            </Link>
+          </Button>
+        ) : (
+          <button
+            type="button"
+            aria-label={isFavorite ? 'Remove favorite' : 'Favorite restaurant'}
+            disabled={isLoading || isSaving || isLocked}
+            onClick={toggleFavorite}
+            className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/80 px-2.5 py-1 text-xs font-medium text-foreground/90 backdrop-blur transition-colors hover:bg-white disabled:opacity-70"
+          >
+            {isFavorite ? (
+              <RiHeartFill className="size-4 text-rose-600" />
+            ) : (
+              <RiHeartLine className="size-4" />
+            )}
+            <span>Favorite</span>
+            <span className="text-muted-foreground">({favoriteCount})</span>
+          </button>
+        )}
         <div className="absolute right-3 bottom-3 inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-foreground">
           <RiStarFill className="size-3.5 text-amber-500" />
           {restaurant.average_rating?.toFixed(1) ?? '4.5'}

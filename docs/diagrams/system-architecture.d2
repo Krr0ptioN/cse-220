@@ -1,10 +1,9 @@
 # System Architecture
 # FlavorMap - Restaurant Review Platform
 
-direction: right
+direction: down
 
-# Client Layer
-browser: Browser {
+client_layer: "Presentation Layer" {
   shape: rectangle
   style: {
     fill: "#E3F2FD"
@@ -12,52 +11,32 @@ browser: Browser {
     stroke-width: 2
     border-radius: 8
   }
-}
 
-nextjs: Next.js 16 App {
-  shape: rectangle
-  style: {
-    fill: "#BBDEFB"
-    stroke: "#1565C0"
-    stroke-width: 2
-    border-radius: 8
-  }
-
-  pages: "Pages\n(Home, Restaurant,\nProfile, Search)" {
+  browser: "Browser" {
     shape: rectangle
     style: {
-      fill: "#E3F2FD"
+      fill: "#FFFFFF"
+      stroke: "#1976D2"
+      stroke-width: 2
       border-radius: 4
+      font-size: 20
     }
   }
 
-  components: "Components\n(RestaurantCard,\nReviewCard, MapView)" {
+  nextjs: "Next.js 16 App\nApp Router, pages,\ncomponents, client services" {
     shape: rectangle
     style: {
-      fill: "#E3F2FD"
+      fill: "#BBDEFB"
+      stroke: "#1565C0"
+      stroke-width: 2
       border-radius: 4
-    }
-  }
-
-  services: "Services\n(api, auth, search)" {
-    shape: rectangle
-    style: {
-      fill: "#E3F2FD"
-      border-radius: 4
-    }
-  }
-
-  state: "State\n(AuthStore, UIStore)" {
-    shape: rectangle
-    style: {
-      fill: "#E3F2FD"
-      border-radius: 4
+      font-size: 20
+      bold: true
     }
   }
 }
 
-# Backend Layer
-django: Django 6 API {
+api_layer: "Application Layer" {
   shape: rectangle
   style: {
     fill: "#C8E6C9"
@@ -66,74 +45,72 @@ django: Django 6 API {
     border-radius: 8
   }
 
-  middleware: "Middleware\n(Auth, CORS,\nRate Limit)" {
+  auth: "Auth + Permissions\nJWT, roles, ownership checks" {
     shape: rectangle
     style: {
       fill: "#E8F5E9"
+      stroke: "#388E3C"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
     }
   }
 
-  apps: "Apps\n(Restaurants,\nReviews, Users,\nFiles)" {
+  api: "Django REST Framework\n(djangorestframework)\nserializers, views, permissions" {
     shape: rectangle
     style: {
       fill: "#E8F5E9"
+      stroke: "#388E3C"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
+      bold: true
     }
   }
 
-  views: "Views\n(REST API\nEndpoints)" {
+  services: "Service + Repository Layer\nvalidation, transactions,\nrating aggregation, URLs" {
     shape: rectangle
     style: {
       fill: "#E8F5E9"
+      stroke: "#388E3C"
+      stroke-width: 2
       border-radius: 4
+      font-size: 18
     }
   }
 }
 
-celery: Celery Workers {
+data_layer: "Data and File Storage" {
   shape: rectangle
   style: {
-    fill: "#FFF9C4"
-    stroke: "#F9A825"
+    fill: "#F8F1FF"
+    stroke: "#7B1FA2"
     stroke-width: 2
     border-radius: 8
   }
-}
 
-# Data Layer
-postgresql: PostgreSQL {
-  shape: cylinder
-  style: {
-    fill: "#D1C4E9"
-    stroke: "#7B1FA2"
-    stroke-width: 2
+  postgresql: "PostgreSQL\nrelational data,\nratings, ownership" {
+    shape: cylinder
+    style: {
+      fill: "#D1C4E9"
+      stroke: "#7B1FA2"
+      stroke-width: 2
+      font-size: 18
+      bold: true
+    }
+  }
+
+  minio: "MinIO Object Storage\nrestaurant photos,\nfile objects" {
+    shape: cylinder
+    style: {
+      fill: "#FFE0B2"
+      stroke: "#EF6C00"
+      stroke-width: 2
+      font-size: 18
+      bold: true
+    }
   }
 }
 
-redis: Redis Cache {
-  shape: cylinder
-  style: {
-    fill: "#FFCDD2"
-    stroke: "#C62828"
-    stroke-width: 2
-  }
-}
-
-minio: MinIO Object Storage {
-  shape: cylinder
-  style: {
-    fill: "#FFE0B2"
-    stroke: "#EF6C00"
-    stroke-width: 2
-  }
-}
-
-# Connections
-browser -> nextjs: "HTTPS"
-nextjs -> django: "REST API\n(JSON)"
-django -> postgresql: "SQL\n(Django ORM)"
-django -> redis: "Cache\nRead/Write"
-django -> minio: "Presigned URLs\n(File Ops)"
-django -> celery: "Async Tasks"
-celery -> minio: "Process Files"
+client_layer -> api_layer: "HTTPS + REST JSON"
+api_layer -> data_layer: "Django ORM + file operations"

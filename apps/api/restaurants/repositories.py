@@ -1,4 +1,5 @@
 """Restaurant data access layer."""
+from restaurants.query_builder import RestaurantQueryBuilder
 
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
 from django.db import transaction
@@ -6,33 +7,18 @@ from django.db import transaction
 class RestaurantRepository:
     """Repository for restaurant persistence and queries."""
 
-    def list_restaurants(self, filters: dict | None = None, sort: str | None = None):
-        queryset = Restaurant.objects.prefetch_related("categories", "opening_hours").all()
-        filters = filters or {}
-
-        category = filters.get("category")
-        city = filters.get("city")
-        price_range = filters.get("price_range")
-        min_rating = filters.get("min_rating")
-
-        if category:
-            queryset = queryset.filter(categories__slug=category)
-
-        if city:
-            queryset = queryset.filter(city__iexact=city)
-
-        if price_range:
-            queryset = queryset.filter(price_range=price_range)
-
-        if min_rating is not None:
-            queryset = queryset.filter(average_rating__gte=min_rating)
-
-        if category:
-            queryset = queryset.distinct()
- 
-        if sort == "rating":
-            queryset = queryset.order_by("-average_rating", "-review_count")
-        return queryset
+    def list_restaurants(
+        self,
+        filters: dict | None = None,
+        sort: str | None = None,
+    ):
+        return (
+            RestaurantQueryBuilder()
+            .with_related()
+            .apply_filters(filters)
+            .apply_sort(sort)
+            .build()
+        )
 
     def list_categories(self):
         return Category.objects.all()
@@ -90,3 +76,18 @@ class RestaurantRepository:
                 for hour in hours_data
             ]
             return OpeningHour.objects.bulk_create(hours)
+
+    def list_favorite_restaurants(
+        self,
+        user,
+        filters: dict | None = None,
+        sort: str | None = None,
+    ):
+        return (
+            RestaurantQueryBuilder()
+            .with_related()
+            .favorites_for_user(user)
+            .apply_filters(filters)
+            .apply_sort(sort)
+            .build()
+        )

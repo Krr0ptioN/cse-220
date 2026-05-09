@@ -23,6 +23,26 @@ class UserPublicSerializer(serializers.ModelSerializer):
         ]
 
 
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """Editable fields for the current user's profile."""
+
+    class Meta:
+        model = User
+        fields = ["username", "display_name", "bio", "avatar_url"]
+        extra_kwargs = {
+            "username": {"required": False},
+            "display_name": {"required": False, "allow_blank": True},
+            "bio": {"required": False, "allow_blank": True},
+            "avatar_url": {"required": False, "allow_blank": True},
+        }
+
+
+class UserAvatarUploadSerializer(serializers.Serializer):
+    """Avatar image upload payload for the current user's profile."""
+
+    avatar = serializers.ImageField(required=True)
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     """Public registration serializer for reviewer and owner accounts."""
 

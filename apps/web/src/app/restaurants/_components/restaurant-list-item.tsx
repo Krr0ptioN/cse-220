@@ -5,14 +5,13 @@ import {
   RiMapPinLine,
   RiRouteLine,
   RiStarFill,
-  RiTimeLine,
 } from '@remixicon/react';
 import {
   getRestaurantImageUrl,
   getRestaurantDistanceKm,
-  getRestaurantIsOpen,
   type Restaurant,
 } from '@/lib/restaurants';
+import { RestaurantHours } from './restaurant-hours';
 
 interface RestaurantListItemProps {
   restaurant: Restaurant;
@@ -31,7 +30,8 @@ export function RestaurantListItem({
 }: RestaurantListItemProps) {
   const imageUrl = getRestaurantImageUrl(restaurant);
   const distanceKm = getRestaurantDistanceKm(restaurant.slug);
-  const isOpen = getRestaurantIsOpen(restaurant.slug);
+  const categoryName =
+    restaurant.category?.name ?? restaurant.categories?.[0]?.name ?? 'Restaurant';
 
   return (
     <button
@@ -82,19 +82,15 @@ export function RestaurantListItem({
               <RiRouteLine className="size-3" />
               {distanceKm.toFixed(1)} km
             </span>
-            <span
-              className={`inline-flex items-center gap-0.5 text-[10px] ${
-                isOpen ? 'text-green-600' : 'text-muted-foreground'
-              }`}
-            >
-              <RiTimeLine className="size-3" />
-              {isOpen ? 'Open' : 'Closed'}
+            <div className="basis-full">
+              <RestaurantHours openingHours={restaurant.opening_hours} compact />
+            </div>
+            <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
+              {categoryName}
+            </Badge>
+            <span className="text-[10px] text-muted-foreground">
+              {restaurant.favorite_count ?? 0} saves
             </span>
-            {restaurant.category?.name && (
-              <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                {restaurant.category.name}
-              </Badge>
-            )}
             {restaurant.price_range && (
               <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
                 {restaurant.price_range}
