@@ -184,6 +184,7 @@ export const API_ENDPOINTS = {
   },
   users: {
     me: () => `${getApiBaseUrl()}/api/v1/users/me/`,
+    avatar: () => `${getApiBaseUrl()}/api/v1/users/me/avatar/`,
   },
   reviews: {
     list: (restaurantSlug: string) =>

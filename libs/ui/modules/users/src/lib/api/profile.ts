@@ -25,6 +25,20 @@ export function updateUserProfile(
   });
 }
 
+export function uploadUserAvatar(
+  request: SessionRequest,
+  usersMeAvatarUrl: string,
+  file: File,
+): Promise<UserProfile> {
+  const body = new FormData();
+  body.set("avatar", file);
+
+  return request<UserProfile>(usersMeAvatarUrl, {
+    method: "POST",
+    body,
+  });
+}
+
 export function normalizeUserProfilePayload(
   payload: UpdateUserProfilePayload,
 ): UpdateUserProfilePayload {

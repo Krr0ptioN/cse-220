@@ -15,6 +15,7 @@ import { getFavoriteRestaurants } from "@flavor-map/ui-module-restaurants";
 import {
   getUserProfile,
   updateUserProfile,
+  uploadUserAvatar,
   UserProfileEditor,
   type UpdateUserProfilePayload,
 } from "@flavor-map/ui-module-users";
@@ -47,11 +48,32 @@ export default function ProfileView() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (payload: UpdateUserProfilePayload) =>
-      updateUserProfile(sessionRequest, API_ENDPOINTS.users.me(), payload),
+    mutationFn: async (payload: UpdateUserProfilePayload) => {
+      const { avatar_file: avatarFile, ...profilePayload } = payload;
+      const updatedProfile = await updateUserProfile(
+        sessionRequest,
+        API_ENDPOINTS.users.me(),
+        profilePayload,
+      );
+
+      if (!avatarFile) {
+        return updatedProfile;
+      }
+
+      return uploadUserAvatar(
+        sessionRequest,
+        API_ENDPOINTS.users.avatar(),
+        avatarFile,
+      );
+    },
     onSuccess: (updatedProfile) => {
       queryClient.setQueryData(["profile"], updatedProfile);
       queryClient.invalidateQueries({ queryKey: ["profile"] });
+      window.dispatchEvent(
+        new CustomEvent("flavormap:profile-updated", {
+          detail: updatedProfile,
+        }),
+      );
     },
   });
 

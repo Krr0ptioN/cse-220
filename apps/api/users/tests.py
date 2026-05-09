@@ -6,6 +6,7 @@ import pytest
 from django.test import Client
 
 from users.models import UserRole
+from tests.factories import create_image_upload as _image_upload
 from tests.factories import create_user as _create_user
 
 pytestmark = pytest.mark.django_db
@@ -164,6 +165,39 @@ def test_user_profile_patch_rejects_duplicate_username():
         "/api/v1/users/me/",
         data={"username": existing_user.username},
         content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation_error"
+
+
+def test_user_profile_avatar_upload_stores_image_and_updates_avatar_url():
+    client = Client()
+    user = _create_user(prefix="profile-avatar", display_name="Avatar User")
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1/users/me/avatar/",
+        data={"avatar": _image_upload("avatar.png")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["id"] == str(user.id)
+    assert payload["avatar_url"].startswith("/api/v1/files/")
+
+    user.refresh_from_db()
+    assert user.avatar_url == payload["avatar_url"]
+
+
+def test_user_profile_avatar_upload_requires_image_file():
+    client = Client()
+    user = _create_user(prefix="profile-avatar-invalid")
+    client.force_login(user)
+
+    response = client.post(
+        "/api/v1/users/me/avatar/",
+        data={"avatar": "not an image"},
     )
 
     assert response.status_code == 400

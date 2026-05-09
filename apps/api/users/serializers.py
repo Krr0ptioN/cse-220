@@ -37,6 +37,12 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         }
 
 
+class UserAvatarUploadSerializer(serializers.Serializer):
+    """Avatar image upload payload for the current user's profile."""
+
+    avatar = serializers.ImageField(required=True)
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     """Public registration serializer for reviewer and owner accounts."""
 

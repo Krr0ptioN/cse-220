@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { RiUploadCloud2Line } from "@remixicon/react";
 import {
   Avatar,
   AvatarFallback,
@@ -15,6 +16,7 @@ import {
 } from "ui-common";
 
 import type { UpdateUserProfilePayload, UserProfile } from "../api";
+import { useFileUpload } from "./use-file-upload";
 
 export interface UserProfileEditorProps {
   profile?: UserProfile | null;
@@ -37,12 +39,40 @@ export function UserProfileEditor({
   const [displayName, setDisplayName] = React.useState("");
   const [bio, setBio] = React.useState("");
   const [avatarUrl, setAvatarUrl] = React.useState("");
+  const [avatarFile, setAvatarFile] = React.useState<File | undefined>();
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [{ files, isDragging, errors }, fileUpload] = useFileUpload({
+    accept: "image/jpeg,image/png,image/webp",
+    maxFiles: 1,
+    maxSize: 2 * 1024 * 1024,
+    onFilesAdded: (addedFiles) => {
+      const addedFile = addedFiles[0]?.file;
+
+      if (!(addedFile instanceof File)) {
+        return;
+      }
+
+      setAvatarFile(addedFile);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setUploadError(null);
+        }
+      };
+      reader.onerror = () => {
+        setUploadError("We could not read that image. Try another file.");
+      };
+      reader.readAsDataURL(addedFile);
+    },
+  });
 
   React.useEffect(() => {
     setUsername(profile?.username ?? "");
     setDisplayName(profile?.display_name ?? "");
     setBio(profile?.bio ?? "");
     setAvatarUrl(profile?.avatar_url ?? "");
+    setAvatarFile(undefined);
   }, [profile]);
 
   if (isLoading) {
@@ -50,11 +80,13 @@ export function UserProfileEditor({
   }
 
   const initials = getInitials(displayName || username || profile?.email);
+  const avatarPreview = files[0]?.preview || avatarUrl.trim() || undefined;
   const hasChanges =
     username.trim() !== (profile?.username ?? "") ||
     displayName.trim() !== (profile?.display_name ?? "") ||
     bio.trim() !== (profile?.bio ?? "") ||
-    avatarUrl.trim() !== (profile?.avatar_url ?? "");
+    avatarUrl.trim() !== (profile?.avatar_url ?? "") ||
+    avatarFile !== undefined;
 
   return (
     <form
@@ -66,6 +98,7 @@ export function UserProfileEditor({
           display_name: displayName,
           bio,
           avatar_url: avatarUrl,
+          avatar_file: avatarFile,
         });
       }}
     >
@@ -73,10 +106,19 @@ export function UserProfileEditor({
         title="Public profile"
         description="This information appears on your reviews and saved restaurant activity."
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div
+          className={cn(
+            "flex flex-col gap-4 rounded-lg border border-dashed border-border/80 p-4 transition sm:flex-row sm:items-center",
+            isDragging && "border-primary bg-primary/5",
+          )}
+          onDragEnter={fileUpload.handleDragEnter}
+          onDragLeave={fileUpload.handleDragLeave}
+          onDragOver={fileUpload.handleDragOver}
+          onDrop={fileUpload.handleDrop}
+        >
           <Avatar className="h-20 w-20 border">
             <AvatarImage
-              src={avatarUrl.trim() || undefined}
+              src={avatarPreview}
               alt={displayName || username || "User avatar"}
             />
             <AvatarFallback className="text-lg font-semibold">
@@ -84,13 +126,37 @@ export function UserProfileEditor({
             </AvatarFallback>
           </Avatar>
 
-          <div className="grid flex-1 gap-2">
-            <Label htmlFor="avatar_url">Avatar URL</Label>
+          <div className="grid flex-1 gap-3">
+            <input
+              {...fileUpload.getInputProps({
+                id: "profile_picture",
+                "aria-label": "Profile picture",
+                className: "sr-only",
+              })}
+            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Button
+                type="button"
+                variant="outline"
+                className="gap-2"
+                onClick={fileUpload.openFileDialog}
+              >
+                <RiUploadCloud2Line className="size-4" aria-hidden="true" />
+                Upload picture
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                JPG, PNG, or WebP. Max 2 MB.
+              </p>
+            </div>
+            {(errors[0] || uploadError) && (
+              <p className="text-sm text-destructive">{errors[0] || uploadError}</p>
+            )}
             <Input
               id="avatar_url"
               type="url"
               value={avatarUrl}
               placeholder="https://example.com/avatar.png"
+              className="hidden"
               onChange={(event) => setAvatarUrl(event.target.value)}
             />
           </div>

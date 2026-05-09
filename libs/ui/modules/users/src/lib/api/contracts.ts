@@ -17,6 +17,7 @@ export interface UpdateUserProfilePayload {
   display_name?: string;
   bio?: string;
   avatar_url?: string;
+  avatar_file?: File;
 }
 
 export type SessionRequest = <T>(

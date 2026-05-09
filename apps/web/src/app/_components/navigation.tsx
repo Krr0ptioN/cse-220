@@ -76,6 +76,29 @@ export function Navigation() {
     };
   }, [pathname]);
 
+  useEffect(() => {
+    function handleProfileUpdated(event: Event) {
+      const updatedProfile = (event as CustomEvent<Partial<User>>).detail;
+
+      setUser((currentUser) => {
+        if (!currentUser || (updatedProfile.id && updatedProfile.id !== currentUser.id)) {
+          return currentUser;
+        }
+
+        return {
+          ...currentUser,
+          ...updatedProfile,
+        };
+      });
+    }
+
+    window.addEventListener('flavormap:profile-updated', handleProfileUpdated);
+
+    return () => {
+      window.removeEventListener('flavormap:profile-updated', handleProfileUpdated);
+    };
+  }, []);
+
   if (pathname.startsWith('/owner/dashboard') || pathname.startsWith('/auth') || pathname.startsWith('/business')) {
     return null;
   }

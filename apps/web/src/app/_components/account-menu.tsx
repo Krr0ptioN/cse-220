@@ -1,6 +1,7 @@
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,7 @@ export function AccountMenu({
   isSigningOut: boolean;
 }) {
   const initials = getInitials(displayName || user.username || user.email);
+  const avatarAlt = displayName || user.username || 'User avatar';
 
   return (
     <DropdownMenu>
@@ -54,6 +56,7 @@ export function AccountMenu({
           className="h-auto gap-3 rounded-full border border-border/70 px-3 py-2 text-left shadow-sm hover:bg-background"
         >
           <Avatar size="sm">
+            <AvatarImage src={user.avatar_url || undefined} alt={avatarAlt} />
             <AvatarFallback className="bg-muted text-xs font-semibold text-foreground">
               {initials}
             </AvatarFallback>
@@ -72,6 +75,7 @@ export function AccountMenu({
       <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuItem className="flex items-center gap-3" onSelect={() => onNavigate('/profile')}>
           <Avatar size="sm">
+            <AvatarImage src={user.avatar_url || undefined} alt={avatarAlt} />
             <AvatarFallback className="bg-muted text-xs font-semibold text-foreground">
               {initials}
             </AvatarFallback>
