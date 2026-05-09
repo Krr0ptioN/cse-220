@@ -16,6 +16,7 @@ import {
   fetchRestaurantMenuItems,
   getRestaurantCoverImage,
   getRestaurantImageUrl,
+  getRestaurantPhotoUrls,
   getRestaurantDistanceKm,
   getRestaurantStatus,
   slugToTitle,
@@ -24,6 +25,7 @@ import { fetchRestaurantReviews } from '@/lib/reviews';
 import { RestaurantFavoriteButton } from '../_components/restaurant-favorite-button';
 import { RestaurantHours } from '../_components/restaurant-hours';
 import { RestaurantMenuPreview } from '../_components/restaurant-menu-preview';
+import { RestaurantPhotoCarousel } from '../_components/restaurant-photo-carousel';
 import { ReviewSection } from '../_components/review-section';
 
 type RestaurantDetailPageProps = {
@@ -44,6 +46,7 @@ export default async function RestaurantDetailPage({
 
   const displayName = restaurant?.name || slugToTitle(slug);
   const imageUrl = restaurant ? getRestaurantImageUrl(restaurant) : getRestaurantCoverImage(slug);
+  const photoUrls = restaurant ? getRestaurantPhotoUrls(restaurant) : [imageUrl];
   const distanceKm = getRestaurantDistanceKm(slug);
   const status = restaurant ? getRestaurantStatus(restaurant.opening_hours) : null;
 
@@ -52,10 +55,9 @@ export default async function RestaurantDetailPage({
       {/* Hero */}
       <section className="relative">
         <AspectRatio ratio={21 / 9} className="overflow-hidden">
-          <img
-            src={imageUrl}
+          <RestaurantPhotoCarousel
+            images={photoUrls.length ? photoUrls : [imageUrl]}
             alt={displayName}
-            className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
         </AspectRatio>

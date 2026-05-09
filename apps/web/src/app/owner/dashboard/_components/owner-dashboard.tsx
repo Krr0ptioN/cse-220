@@ -54,6 +54,8 @@ import { sessionRequest } from '@/app/(auth)/auth/_lib/auth-api';
 import {
   API_ENDPOINTS,
   getRestaurantImageUrl,
+  getRestaurantPhotoUrls,
+  normalizeRestaurantPhotos,
   normalizeMenuItems,
   resolveApiAssetUrl,
   type MenuItem,
@@ -61,6 +63,7 @@ import {
   type OwnerDashboardRestaurant,
   type Restaurant,
   type RestaurantCategory,
+  type RestaurantPhoto,
   type User,
 } from '@/lib/restaurants';
 import { fetchRestaurantReviews, submitReview, type Review } from '@/lib/reviews';
@@ -71,6 +74,7 @@ import {
   type RestaurantFormValues,
 } from '../_lib/owner-dashboard-utils';
 import { OwnerListingForm } from './owner-listing-form';
+import { RestaurantPhotoCarousel } from '@/app/restaurants/_components/restaurant-photo-carousel';
 
 type LoadState = 'loading' | 'ready' | 'access-denied' | 'error';
 type MenuLoadState = 'idle' | 'loading' | 'ready' | 'error';
@@ -97,6 +101,7 @@ type DashboardRestaurantSource = {
   last_favorited_at?: string | null;
   is_favorite?: boolean;
   primary_photo_url?: string;
+  photos?: RestaurantPhoto[];
   reviewer_stats?: OwnerDashboardRestaurant['reviewer_stats'];
   rating_progress?: OwnerDashboardRestaurant['rating_progress'];
 };
@@ -234,6 +239,12 @@ export function OwnerDashboard() {
     photoPreviewUrl ||
     resolveApiAssetUrl(selectedRestaurant?.primary_photo_url) ||
     (selectedRestaurant ? getRestaurantImageUrl(selectedRestaurant) : null);
+  const selectedRestaurantPhotoUrls = selectedRestaurant
+    ? [
+        ...(photoPreviewUrl ? [photoPreviewUrl] : []),
+        ...getRestaurantPhotoUrls(selectedRestaurant),
+      ]
+    : [];
   const selectedRestaurantSeries = useMemo(() => {
     const series = selectedRestaurant?.rating_progress ?? [];
     return series.map((point) => ({
@@ -266,13 +277,26 @@ export function OwnerDashboard() {
             method: 'POST',
             body: payload,
           });
+      const galleryPhotos = formValues.galleryPhotoFiles.length
+        ? await uploadRestaurantPhotos(savedRestaurant.slug, formValues.galleryPhotoFiles)
+        : [];
+      const savedWithPhotos =
+        galleryPhotos.length > 0
+          ? {
+              ...savedRestaurant,
+              photos: [...(savedRestaurant.photos ?? []), ...galleryPhotos],
+              primary_photo_url:
+                galleryPhotos.find((photo) => photo.is_primary)?.url ??
+                savedRestaurant.primary_photo_url,
+            }
+          : savedRestaurant;
 
       const nextRestaurant = editingSlug
         ? mergeDashboardRestaurant(
             restaurants.find((restaurant) => restaurant.slug === editingSlug) ?? null,
-            savedRestaurant,
+            savedWithPhotos,
           )
-        : normalizeDashboardRestaurant(savedRestaurant);
+        : normalizeDashboardRestaurant(savedWithPhotos);
 
       if (editingSlug) {
         setRestaurants((current) =>
@@ -343,6 +367,43 @@ export function OwnerDashboard() {
     });
     setError(null);
     setMessage(null);
+  }
+
+  async function setPrimaryPhoto(photo: RestaurantPhoto) {
+    if (!selectedRestaurant) return;
+    const updated = await sessionRequest<Restaurant>(
+      API_ENDPOINTS.restaurants.primaryPhoto(selectedRestaurant.slug, photo.id),
+      { method: 'POST' },
+    );
+    const nextRestaurant = mergeDashboardRestaurant(selectedRestaurant, updated);
+    setRestaurants((current) =>
+      current.map((restaurant) =>
+        restaurant.slug === nextRestaurant.slug ? nextRestaurant : restaurant,
+      ),
+    );
+    setMessage('Primary photo updated.');
+  }
+
+  async function deleteRestaurantPhoto(photo: RestaurantPhoto) {
+    if (!selectedRestaurant) return;
+    await sessionRequest<void>(API_ENDPOINTS.restaurants.photo(selectedRestaurant.slug, photo.id), {
+      method: 'DELETE',
+    });
+    const remainingPhotos = (selectedRestaurant.photos ?? []).filter(
+      (candidate) => candidate.id !== photo.id,
+    );
+    const nextPrimary = remainingPhotos.find((candidate) => candidate.is_primary) ?? remainingPhotos[0];
+    const nextRestaurant = {
+      ...selectedRestaurant,
+      photos: remainingPhotos,
+      primary_photo_url: nextPrimary?.url ?? '',
+    };
+    setRestaurants((current) =>
+      current.map((restaurant) =>
+        restaurant.slug === nextRestaurant.slug ? nextRestaurant : restaurant,
+      ),
+    );
+    setMessage('Photo deleted.');
   }
 
   if (loadState === 'loading') {
@@ -445,10 +506,13 @@ export function OwnerDashboard() {
                       <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/20">
                         <AspectRatio ratio={16 / 10}>
                           {selectedRestaurantPreviewUrl ? (
-                            <img
-                              src={selectedRestaurantPreviewUrl}
+                            <RestaurantPhotoCarousel
+                              images={
+                                selectedRestaurantPhotoUrls.length
+                                  ? selectedRestaurantPhotoUrls
+                                  : [selectedRestaurantPreviewUrl]
+                              }
                               alt={selectedRestaurant?.name || 'Restaurant preview'}
-                              className="h-full w-full object-cover"
                             />
                           ) : (
                             <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,oklch(0.98_0.01_90),oklch(0.94_0.02_86))] text-muted-foreground">
@@ -477,11 +541,66 @@ export function OwnerDashboard() {
                         label="Photo"
                         value={
                           formValues.primaryPhotoFile?.name ||
-                          (selectedRestaurant?.primary_photo_url
-                            ? 'Current primary photo'
-                            : 'Upload a photo')
+                          (selectedRestaurant?.photos?.length
+                            ? `${selectedRestaurant.photos.length} gallery photo${
+                                selectedRestaurant.photos.length === 1 ? '' : 's'
+                              }`
+                            : selectedRestaurant?.primary_photo_url
+                              ? 'Current primary photo'
+                              : 'Upload a photo')
                         }
                       />
+                      {selectedRestaurant?.photos?.length ? (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Gallery</p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {selectedRestaurant.photos.map((photo) => (
+                              <div
+                                key={photo.id}
+                                className="overflow-hidden rounded-xl border border-border/70 bg-background"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => setPrimaryPhoto(photo)}
+                                  className="relative block aspect-video w-full overflow-hidden"
+                                  aria-label="Set primary photo"
+                                >
+                                  <img
+                                    src={photo.url}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                  />
+                                  {photo.is_primary && (
+                                    <span className="absolute left-2 top-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                                      Primary
+                                    </span>
+                                  )}
+                                </button>
+                                <div className="flex gap-1 p-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 flex-1 px-2 text-[11px]"
+                                    onClick={() => setPrimaryPhoto(photo)}
+                                  >
+                                    Set primary
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    aria-label="Delete photo"
+                                    onClick={() => deleteRestaurantPhoto(photo)}
+                                  >
+                                    <RiDeleteBinLine className="size-3.5" aria-hidden="true" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="space-y-4 px-5 py-4">
                       <DetailRow
@@ -1756,4 +1875,22 @@ function mergeDashboardRestaurant(
     reviewer_stats: existing?.reviewer_stats ?? [],
     rating_progress: existing?.rating_progress ?? [],
   };
+}
+
+async function uploadRestaurantPhotos(
+  restaurantSlug: string,
+  files: File[],
+): Promise<RestaurantPhoto[]> {
+  const formData = new FormData();
+  files.forEach((file) => formData.append('photos', file));
+
+  const payload = await sessionRequest<unknown>(
+    API_ENDPOINTS.restaurants.photos(restaurantSlug),
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
+
+  return normalizeRestaurantPhotos(payload);
 }

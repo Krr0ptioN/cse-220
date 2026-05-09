@@ -217,6 +217,34 @@ export function OwnerListingForm({
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label htmlFor="gallery-photos" className="text-xs font-medium">
+              Gallery photos
+            </label>
+            <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4">
+              <input
+                id="gallery-photos"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={(event) =>
+                  onUpdateField('galleryPhotoFiles', Array.from(event.target.files ?? []))
+                }
+                disabled={isSubmitting}
+                className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-foreground hover:file:bg-primary/90"
+              />
+              <p className="mt-2 text-xs text-muted-foreground">
+                Upload multiple JPG, PNG, or WebP images for the public gallery.
+              </p>
+              {formValues.galleryPhotoFiles.length > 0 && (
+                <p className="mt-2 text-xs font-medium text-foreground">
+                  {formValues.galleryPhotoFiles.length} gallery photo
+                  {formValues.galleryPhotoFiles.length === 1 ? '' : 's'} selected
+                </p>
+              )}
+            </div>
+          </div>
+
           {message && (
             <p className="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-xs text-primary">
               {message}

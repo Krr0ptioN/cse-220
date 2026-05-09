@@ -1,7 +1,7 @@
 """Restaurant data access layer."""
 from restaurants.query_builder import RestaurantQueryBuilder
 
-from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
+from restaurants.models import Category, MenuItem, OpeningHour, Restaurant, RestaurantPhoto
 from django.db import transaction
 
 class RestaurantRepository:
@@ -23,14 +23,14 @@ class RestaurantRepository:
     def list_homepage_top_rated(self, *, limit: int = 5):
         return (
             Restaurant.objects.select_related("owner", "primary_photo")
-            .prefetch_related("categories", "opening_hours")
+            .prefetch_related("categories", "opening_hours", "photos")
             .order_by("-average_rating", "-review_count", "name")[:limit]
         )
 
     def list_homepage_newest(self, *, limit: int = 5):
         return (
             Restaurant.objects.select_related("owner", "primary_photo")
-            .prefetch_related("categories", "opening_hours")
+            .prefetch_related("categories", "opening_hours", "photos")
             .order_by("-created_at", "name")[:limit]
         )
 
@@ -38,12 +38,12 @@ class RestaurantRepository:
         return Category.objects.all()
 
     def list_by_owner(self, owner):
-        return Restaurant.objects.prefetch_related("categories", "opening_hours").filter(owner=owner)
+        return Restaurant.objects.prefetch_related("categories", "opening_hours", "photos").filter(owner=owner)
 
     def get_by_slug(self, slug: str):
         return (
             Restaurant.objects.select_related("owner")
-            .prefetch_related("categories", "opening_hours")
+            .prefetch_related("categories", "opening_hours", "photos")
             .filter(slug=slug)
             .first()
         )
@@ -81,6 +81,26 @@ class RestaurantRepository:
 
     def delete_menu_item(self, menu_item: MenuItem) -> None:
         menu_item.delete()
+
+    def list_photos(self, restaurant):
+        return RestaurantPhoto.objects.filter(restaurant=restaurant).select_related("restaurant", "file")
+
+    def create_photo(self, *, restaurant, file_id, sort_order: int = 0) -> RestaurantPhoto:
+        return RestaurantPhoto.objects.create(
+            restaurant=restaurant,
+            file_id=file_id,
+            sort_order=sort_order,
+        )
+
+    def get_photo(self, *, restaurant, photo_id):
+        return (
+            RestaurantPhoto.objects.filter(id=photo_id, restaurant=restaurant)
+            .select_related("restaurant", "file")
+            .first()
+        )
+
+    def delete_photo(self, photo: RestaurantPhoto) -> None:
+        photo.delete()
 
     def set_opening_hours(self, restaurant, hours_data: list):
         with transaction.atomic(): 

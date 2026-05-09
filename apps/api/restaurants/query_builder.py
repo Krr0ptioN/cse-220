@@ -11,6 +11,7 @@ class RestaurantQueryBuilder:
         self.queryset = self.queryset.prefetch_related(
             "categories",
             "opening_hours",
+            "photos",
         )
         return self
 

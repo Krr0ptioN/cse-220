@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from api.serializers import DynamicFieldsModelSerializer
 from files.services import create_file_service
-from restaurants.models import Category, MenuItem, OpeningHour, Restaurant
+from restaurants.models import Category, MenuItem, OpeningHour, Restaurant, RestaurantPhoto
 
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
@@ -60,6 +60,23 @@ class MenuItemSerializer(serializers.ModelSerializer):
         return create_file_service().get_obfuscated_url(obj.image_id)
 
 
+class RestaurantPhotoSerializer(serializers.ModelSerializer):
+    """Restaurant gallery photo serializer."""
+
+    url = serializers.SerializerMethodField()
+    is_primary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = RestaurantPhoto
+        fields = ["id", "url", "caption", "sort_order", "is_primary", "created_at"]
+
+    def get_url(self, obj) -> str:
+        return create_file_service().get_obfuscated_url(obj.file_id)
+
+    def get_is_primary(self, obj) -> bool:
+        return obj.restaurant.primary_photo_id == obj.file_id
+
+
 class MenuItemWriteSerializer(serializers.ModelSerializer):
     """Request serializer for menu item create/update."""
 
@@ -95,6 +112,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
 
     categories = CategorySerializer(many=True, read_only=True)
     opening_hours = OpeningHourSerializer(many=True, read_only=True)
+    photos = RestaurantPhotoSerializer(many=True, read_only=True)
     primary_photo_url = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
 
@@ -109,6 +127,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "website",
             "categories",
             "opening_hours",
+            "photos",
             "primary_photo_url",
             "address_line1",
             "address_line2",

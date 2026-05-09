@@ -5,6 +5,9 @@ from restaurants.views import (
     OwnerRestaurantsController,
     RestaurantDetailController,
     RestaurantHomepageController,
+    RestaurantPhotoDetailController,
+    RestaurantPhotoPrimaryController,
+    RestaurantPhotosController,
     RestaurantMenuItemDetailController,
     RestaurantMenuItemsController,
     RestaurantsController
@@ -36,6 +39,21 @@ urlpatterns = [
         name="restaurants-mine-dashboard",
     ),
     path("mine/", OwnerRestaurantsController.as_view(), name="restaurants-mine"),
+    path(
+        "<slug:restaurant_slug>/photos/",
+        RestaurantPhotosController.as_view(),
+        name="restaurants-photos",
+    ),
+    path(
+        "<slug:restaurant_slug>/photos/<uuid:photo_id>/",
+        RestaurantPhotoDetailController.as_view(),
+        name="restaurants-photo-detail",
+    ),
+    path(
+        "<slug:restaurant_slug>/photos/<uuid:photo_id>/primary/",
+        RestaurantPhotoPrimaryController.as_view(),
+        name="restaurants-photo-primary",
+    ),
     path(
         "<slug:restaurant_slug>/menu-items/",
         RestaurantMenuItemsController.as_view(),

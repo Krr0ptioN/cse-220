@@ -138,6 +138,31 @@ class Restaurant(models.Model):
         return self.name
 
 
+class RestaurantPhoto(models.Model):
+    """Gallery photo attached to a restaurant."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    restaurant = models.ForeignKey(
+        Restaurant,
+        on_delete=models.CASCADE,
+        related_name="photos",
+    )
+    file = models.ForeignKey(
+        "files.StoredFile",
+        on_delete=models.CASCADE,
+        related_name="restaurant_gallery_photos",
+    )
+    caption = models.CharField(max_length=255, blank=True)
+    sort_order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["sort_order", "created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.restaurant.name} photo"
+
+
 class MenuItem(models.Model):
     """Restaurant menu item."""
 

@@ -23,6 +23,15 @@ export type RestaurantStatus = {
   minutesUntilClose?: number;
 };
 
+export type RestaurantPhoto = {
+  id: string;
+  url: string;
+  caption?: string;
+  sort_order?: number;
+  is_primary?: boolean;
+  created_at?: string;
+};
+
 export type Restaurant = {
   id: string;
   name: string;
@@ -46,6 +55,7 @@ export type Restaurant = {
   last_favorited_at?: string | null;
   is_favorite?: boolean;
   primary_photo_url?: string;
+  photos?: RestaurantPhoto[];
 };
 
 export type MenuItem = {
@@ -175,6 +185,11 @@ export const API_ENDPOINTS = {
       `${getApiBaseUrl()}/api/v1/restaurants/${slug}/menu-items/`,
     menuItem: (slug: string, menuItemId: string) =>
       `${getApiBaseUrl()}/api/v1/restaurants/${slug}/menu-items/${menuItemId}/`,
+    photos: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/photos/`,
+    photo: (slug: string, photoId: string) =>
+      `${getApiBaseUrl()}/api/v1/restaurants/${slug}/photos/${photoId}/`,
+    primaryPhoto: (slug: string, photoId: string) =>
+      `${getApiBaseUrl()}/api/v1/restaurants/${slug}/photos/${photoId}/primary/`,
   },
   auth: {
     csrf: () => `${getApiBaseUrl()}/api/v1/auth/csrf/`,
@@ -270,6 +285,7 @@ export async function fetchRestaurantDetail(
     last_favorited_at: payload.data.last_favorited_at ?? null,
     is_favorite: Boolean(payload.data.is_favorite),
     primary_photo_url: resolveApiAssetUrl(payload.data.primary_photo_url),
+    photos: normalizeRestaurantPhotos(payload.data.photos),
   };
 }
 
@@ -347,6 +363,36 @@ export function normalizeRestaurantsResponse(
   };
 }
 
+export function normalizeRestaurantPhotos(value: unknown): RestaurantPhoto[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const photos: RestaurantPhoto[] = [];
+
+  for (const item of value) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      continue;
+    }
+
+    const candidate = item as Partial<RestaurantPhoto>;
+    if (!candidate.id || !candidate.url) {
+      continue;
+    }
+
+    photos.push({
+      id: String(candidate.id),
+      url: resolveApiAssetUrl(candidate.url),
+      caption: candidate.caption,
+      sort_order: toNonNegativeInt(candidate.sort_order),
+      is_primary: Boolean(candidate.is_primary),
+      created_at: candidate.created_at,
+    });
+  }
+
+  return photos;
+}
+
 export function slugToTitle(slug: string): string {
   return slug
     .split('-')
@@ -382,12 +428,25 @@ export function getRestaurantIsOpen(seed: string): boolean {
 }
 
 export function getRestaurantImageUrl(
-  restaurant: Pick<Restaurant, 'slug' | 'primary_photo_url'>,
+  restaurant: Pick<Restaurant, 'slug' | 'primary_photo_url' | 'photos'>,
 ): string {
   return (
+    resolveApiAssetUrl(restaurant.photos?.find((photo) => photo.is_primary)?.url) ||
     resolveApiAssetUrl(restaurant.primary_photo_url) ||
+    resolveApiAssetUrl(restaurant.photos?.[0]?.url) ||
     getRestaurantCoverImage(restaurant.slug)
   );
+}
+
+export function getRestaurantPhotoUrls(
+  restaurant: Pick<Restaurant, 'slug' | 'primary_photo_url' | 'photos'>,
+): string[] {
+  const urls = [
+    getRestaurantImageUrl(restaurant),
+    ...(restaurant.photos ?? []).map((photo) => resolveApiAssetUrl(photo.url)),
+  ].filter(Boolean);
+
+  return Array.from(new Set(urls));
 }
 
 export function getRestaurantStatus(

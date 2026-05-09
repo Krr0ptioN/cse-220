@@ -14,11 +14,13 @@ import {
 
 import {
   getRestaurantImageUrl,
+  getRestaurantPhotoUrls,
   getRestaurantDistanceKm,
   getRestaurantIsOpen,
   type Restaurant,
 } from '@/lib/restaurants';
 import { useFavoriteRestaurantMutation } from '../_hooks/use-favorite-restaurant-mutation';
+import { RestaurantPhotoCarousel } from './restaurant-photo-carousel';
 
 type RestaurantCardProps = {
   restaurant: Restaurant;
@@ -26,6 +28,7 @@ type RestaurantCardProps = {
 
 export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   const imageUrl = getRestaurantImageUrl(restaurant);
+  const photoUrls = getRestaurantPhotoUrls(restaurant);
   const distanceKm = getRestaurantDistanceKm(restaurant.slug);
   const isOpen = getRestaurantIsOpen(restaurant.slug);
   const {
@@ -42,11 +45,9 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     <Card className="group overflow-hidden border-border/70 bg-card/95 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
       <div className="relative">
         <AspectRatio ratio={16 / 9}>
-          <img
-            src={imageUrl}
+          <RestaurantPhotoCarousel
+            images={photoUrls.length ? photoUrls : [imageUrl]}
             alt={restaurant.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
           />
         </AspectRatio>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />

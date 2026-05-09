@@ -115,6 +115,80 @@ def test_restaurant_update_replaces_primary_photo(tmp_path):
             category.delete()
             owner.delete()
 
+
+def test_owner_can_upload_multiple_restaurant_photos_and_set_primary(tmp_path):
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant = _create_restaurant(owner=owner, slug="gallery-upload-test")
+    category = restaurant.categories.first()
+
+    with override_settings(
+        FILE_STORAGE_LOCAL_ROOT=str(tmp_path),
+        FILE_STORAGE_LOCAL_URL="/media/",
+    ):
+        try:
+            client.force_login(owner)
+            upload_response = client.post(
+                f"/api/v1/restaurants/{restaurant.slug}/photos/",
+                data={
+                    "photos": [
+                        _image_upload("gallery-photo-1.png"),
+                        _image_upload("gallery-photo-2.png"),
+                    ],
+                },
+            )
+
+            assert upload_response.status_code == 201
+            uploaded = upload_response.json()["data"]
+            assert len(uploaded) == 2
+            assert uploaded[0]["url"].startswith("/api/v1/files/")
+            assert uploaded[0]["is_primary"] is True
+            assert uploaded[1]["is_primary"] is False
+
+            primary_response = client.post(
+                f"/api/v1/restaurants/{restaurant.slug}/photos/{uploaded[1]['id']}/primary/",
+            )
+
+            assert primary_response.status_code == 200
+            assert primary_response.json()["data"]["primary_photo_url"] == uploaded[1]["url"]
+        finally:
+            restaurant.delete()
+            category.delete()
+            owner.delete()
+
+
+def test_owner_can_delete_restaurant_photo(tmp_path):
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    restaurant = _create_restaurant(owner=owner, slug="gallery-delete-test")
+    category = restaurant.categories.first()
+
+    with override_settings(
+        FILE_STORAGE_LOCAL_ROOT=str(tmp_path),
+        FILE_STORAGE_LOCAL_URL="/media/",
+    ):
+        try:
+            client.force_login(owner)
+            upload_response = client.post(
+                f"/api/v1/restaurants/{restaurant.slug}/photos/",
+                data={"photos": [_image_upload("delete-me.png")]},
+            )
+            photo_id = upload_response.json()["data"][0]["id"]
+
+            delete_response = client.delete(
+                f"/api/v1/restaurants/{restaurant.slug}/photos/{photo_id}/",
+            )
+
+            assert delete_response.status_code == 204
+            list_response = client.get(f"/api/v1/restaurants/{restaurant.slug}/photos/")
+            assert list_response.status_code == 200
+            assert list_response.json()["data"] == []
+        finally:
+            restaurant.delete()
+            category.delete()
+            owner.delete()
+
+
 def test_restaurant_list_no_auth_required():
     """GET /restaurants/ should not require authentication."""
     client = Client()
