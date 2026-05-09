@@ -13,3 +13,6 @@ class UserService:
 
     def me(self, user) -> dict[str, str]:
         return self.repository.profile_data(user)
+
+    def update_profile(self, user, data: dict):
+        return self.repository.update_profile(user, data)

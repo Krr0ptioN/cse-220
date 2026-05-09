@@ -96,6 +96,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
     categories = CategorySerializer(many=True, read_only=True)
     opening_hours = OpeningHourSerializer(many=True, read_only=True)
     primary_photo_url = serializers.SerializerMethodField()
+    is_favorite = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
@@ -119,6 +120,10 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "price_range",
             "average_rating",
             "review_count",
+            "favorite_count",
+            "favorite_score",
+            "last_favorited_at",
+            "is_favorite",
             "created_at",
             "updated_at",
         ]
@@ -127,6 +132,17 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
         if not obj.primary_photo_id:
             return None
         return create_file_service().get_obfuscated_url(obj.primary_photo_id)
+
+    def get_is_favorite(self, obj) -> bool:
+        annotated_value = getattr(obj, "is_favorite_for_user", None)
+        if annotated_value is not None:
+            return bool(annotated_value)
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user is None or not user.is_authenticated:
+            return False
+        return obj.favorited_by.filter(user=user).exists()
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):

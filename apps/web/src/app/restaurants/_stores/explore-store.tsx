@@ -23,6 +23,10 @@ export type Restaurant = {
   price_range?: string;
   category?: RestaurantCategory;
   primary_photo_url?: string;
+  favorite_count?: number;
+  favorite_score?: number;
+  last_favorited_at?: string | null;
+  is_favorite?: boolean;
 };
 
 export type PaginationMeta = {

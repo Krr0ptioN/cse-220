@@ -1,6 +1,6 @@
 """Views for restaurant endpoints."""
-
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
+from django.db.models import Exists, OuterRef
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +21,7 @@ from restaurants.serializers import (
     RestaurantWriteSerializer,
 )
 from restaurants.services import RestaurantService
+from restaurants.models import Favorite
 
 
 class RestaurantsController(APIView):
@@ -103,8 +104,16 @@ class RestaurantsController(APIView):
         }
 
         sort = request.query_params.get("sort")
-        queryset = self.get_service().list_restaurants()
         queryset = self.get_service().list_restaurants(filters, sort=sort)
+        if request.user.is_authenticated:
+            queryset = queryset.annotate(
+                is_favorite_for_user=Exists(
+                    Favorite.objects.filter(
+                        restaurant_id=OuterRef("pk"),
+                        user=request.user,
+                    )
+                )
+            )
 
         page_obj, pagination = paginate_queryset(queryset, request)
 
@@ -121,6 +130,7 @@ class RestaurantsController(APIView):
             many=True,
             include=include_fields,
             omit=omit_fields,
+            context={"request": request},
         )
         return api_paginated(serializer.data, pagination)
 
@@ -139,7 +149,10 @@ class RestaurantsController(APIView):
             user=user,
             data=serializer.validated_data,
         )
-        return api_data(RestaurantSerializer(restaurant).data, status_code=201)
+        return api_data(
+            RestaurantSerializer(restaurant, context={"request": request}).data,
+            status_code=201,
+        )
 
 
 class CategoryListController(APIView):
@@ -166,7 +179,30 @@ class OwnerRestaurantsController(APIView):
     def get(self, request):
         user = require_authenticated_user(request)
         restaurants = self.get_service().list_owned_restaurants(user)
-        return api_data(RestaurantSerializer(restaurants, many=True).data)
+        restaurants = restaurants.annotate(
+            is_favorite_for_user=Exists(
+                Favorite.objects.filter(
+                    restaurant_id=OuterRef("pk"),
+                    user=user,
+                )
+            )
+        )
+        return api_data(
+            RestaurantSerializer(restaurants, many=True, context={"request": request}).data
+        )
+
+
+class OwnerDashboardController(APIView):
+    """Return analytics for the current restaurant manager."""
+
+    service_class = RestaurantService
+
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
+    def get(self, request):
+        user = require_authenticated_user(request)
+        return api_data(self.get_service().get_owner_dashboard(user))
 
 
 class RestaurantMenuItemsController(APIView):
@@ -292,7 +328,7 @@ class RestaurantDetailController(APIView):
     )
     def get(self, request, slug):
         restaurant = self.get_service().get_restaurant(slug)
-        return api_data(RestaurantSerializer(restaurant).data)
+        return api_data(RestaurantSerializer(restaurant, context={"request": request}).data)
 
     @extend_schema(
         summary="Update restaurant",
@@ -312,7 +348,7 @@ class RestaurantDetailController(APIView):
             restaurant=restaurant,
             data=serializer.validated_data,
         )
-        return api_data(RestaurantSerializer(restaurant).data)
+        return api_data(RestaurantSerializer(restaurant, context={"request": request}).data)
 
     @extend_schema(
         summary="Delete restaurant",

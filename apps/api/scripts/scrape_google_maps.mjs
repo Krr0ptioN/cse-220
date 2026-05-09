@@ -298,7 +298,10 @@ async function enrichPlaceDetails(page, candidate) {
   await page.waitForTimeout(2200);
 
   const resolvedUrl = page.url();
-  const { lat, lng } = parseLatLngFromUrl(resolvedUrl);
+  const resolvedCoordinates = parseLatLngFromUrl(resolvedUrl);
+  const sourceCoordinates = parseLatLngFromUrl(candidate.source_url);
+  const lat = resolvedCoordinates.lat ?? sourceCoordinates.lat;
+  const lng = resolvedCoordinates.lng ?? sourceCoordinates.lng;
 
   const name = (await readText(page, 'h1.DUwDvf')) || candidate.name;
   const address = await readText(page, 'button[data-item-id="address"]');

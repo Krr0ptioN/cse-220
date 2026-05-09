@@ -5,10 +5,11 @@ from django.test import Client
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.test.utils import override_settings
 
-from restaurants.models import MenuItem, Restaurant
+from restaurants.models import Favorite, MenuItem, Restaurant
 from users.models import UserRole
 from tests.factories import (
     create_category as _create_category,
+    create_review as _create_review,
     create_image_upload as _image_upload,
     create_restaurant as _create_restaurant,
     create_user as _create_user,
@@ -123,6 +124,34 @@ def test_restaurant_list_no_auth_required():
     assert "data" in response.json()
 
 
+def test_restaurant_list_marks_favorite_state_for_authenticated_user():
+    """Authenticated reviewers should receive per-restaurant favorite flags in list responses."""
+    client = Client()
+    user = _create_user(role=UserRole.USER, prefix="list-favorite-user")
+    favorited_restaurant = _create_restaurant(slug="list-favorited-restaurant")
+    unfavorited_restaurant = _create_restaurant(slug="list-unfavorited-restaurant")
+    favorite_category = favorited_restaurant.categories.first()
+    unfavorite_category = unfavorited_restaurant.categories.first()
+
+    try:
+        Favorite.objects.create(user=user, restaurant=favorited_restaurant)
+        client.force_login(user)
+
+        response = client.get("/api/v1/restaurants/")
+
+        assert response.status_code == 200
+        payload = response.json()["data"]
+        restaurants_by_slug = {item["slug"]: item for item in payload}
+        assert restaurants_by_slug[favorited_restaurant.slug]["is_favorite"] is True
+        assert restaurants_by_slug[unfavorited_restaurant.slug]["is_favorite"] is False
+    finally:
+        favorited_restaurant.delete()
+        unfavorited_restaurant.delete()
+        favorite_category.delete()
+        unfavorite_category.delete()
+        user.delete()
+
+
 def test_category_list_no_auth_required():
     """GET /categories/ returns categories for restaurant creation forms."""
     client = Client()
@@ -139,6 +168,57 @@ def test_category_list_no_auth_required():
     finally:
         first.delete()
         second.delete()
+
+
+def test_favorite_restaurant_requires_authentication():
+    """Favorite list is scoped to the current reviewer session."""
+    client = Client()
+
+    response = client.get("/api/v1/restaurants/favorites/")
+
+    assert response.status_code == 401
+    assert response.json()["error"]["code"] == "auth_required"
+
+
+def test_favorite_restaurant_create_list_and_delete():
+    """Reviewers can save, list, and remove favorite restaurants by slug."""
+    client = Client()
+    user = _create_user(role=UserRole.USER, prefix="favorite-user")
+    restaurant = _create_restaurant(slug="favorite-test-restaurant")
+    category = restaurant.categories.first()
+    owner = restaurant.owner
+
+    try:
+        client.force_login(user)
+        create_response = client.post(
+            f"/api/v1/restaurants/{restaurant.slug}/favorite/",
+        )
+
+        assert create_response.status_code == 201
+        created_payload = create_response.json()["data"]
+        assert created_payload["is_favorite"] is True
+        assert created_payload["restaurant"]["slug"] == restaurant.slug
+        assert Favorite.objects.filter(user=user, restaurant=restaurant).exists()
+
+        list_response = client.get("/api/v1/restaurants/favorites/")
+
+        assert list_response.status_code == 200
+        list_payload = list_response.json()
+        assert [item["slug"] for item in list_payload["data"]] == [restaurant.slug]
+        assert list_payload["pagination"]["total"] == 1
+
+        delete_response = client.delete(
+            f"/api/v1/restaurants/{restaurant.slug}/favorite/",
+        )
+
+        assert delete_response.status_code == 200
+        assert delete_response.json()["data"]["is_favorite"] is False
+        assert not Favorite.objects.filter(user=user, restaurant=restaurant).exists()
+    finally:
+        restaurant.delete()
+        category.delete()
+        owner.delete()
+        user.delete()
 
 
 def test_restaurant_mine_requires_owner_role():
@@ -182,6 +262,56 @@ def test_restaurant_mine_returns_only_owned_restaurants():
         other_category.delete()
         owner.delete()
         other_owner.delete()
+
+
+def test_restaurant_dashboard_returns_owner_analytics():
+    """GET /restaurants/mine/dashboard/ returns owner analytics payload."""
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    reviewer = _create_user(role=UserRole.USER, prefix="dashboard-reviewer")
+    restaurant = _create_restaurant(owner=owner, average_rating="4.50", review_count=2)
+    other_restaurant = _create_restaurant(average_rating="5.00", review_count=1)
+    first_review = _create_review(restaurant=restaurant, user=reviewer, rating=4)
+    second_review = _create_review(
+        restaurant=restaurant,
+        user=_create_user(role=UserRole.USER, prefix="dashboard-reviewer-2"),
+        rating=5,
+    )
+    other_review = _create_review(restaurant=other_restaurant, rating=5)
+
+    try:
+        client.force_login(owner)
+        response = client.get("/api/v1/restaurants/mine/dashboard/")
+
+        assert response.status_code == 200
+        payload = response.json()["data"]
+        assert payload["summary"]["restaurant_count"] == 1
+        assert payload["summary"]["review_count"] == 2
+        assert payload["summary"]["reviewer_count"] == 2
+        assert payload["summary"]["average_rating"] == 4.5
+
+        assert [item["slug"] for item in payload["restaurants"]] == [restaurant.slug]
+        restaurant_payload = payload["restaurants"][0]
+        assert restaurant_payload["review_count"] == 2
+        assert restaurant_payload["average_rating"] == 4.5
+        assert len(restaurant_payload["reviewer_stats"]) == 2
+        assert restaurant_payload["rating_progress"]
+
+        reviewer_ids = {item["id"] for item in payload["reviewers"]}
+        assert str(reviewer.id) in reviewer_ids
+    finally:
+        first_review.delete()
+        second_review.user.delete()
+        second_review.delete()
+        other_review.delete()
+        other_restaurant_category = other_restaurant.categories.first()
+        restaurant_category = restaurant.categories.first()
+        restaurant.delete()
+        other_restaurant.delete()
+        restaurant_category.delete()
+        other_restaurant_category.delete()
+        reviewer.delete()
+        owner.delete()
 
 
 def test_restaurant_detail_no_auth_required():
@@ -484,3 +614,102 @@ def test_menu_item_detail_is_scoped_to_restaurant():
         second_category.delete()
         first_owner.delete()
         second_owner.delete()
+
+
+def test_restaurant_detail_includes_opening_hours_and_favorite_state():
+    client = Client()
+    reviewer = _create_user(role=UserRole.USER, prefix="detail-reviewer")
+    restaurant = _create_restaurant(slug="detail-hours-favorite")
+    category = restaurant.categories.first()
+    owner = restaurant.owner
+
+    try:
+        from restaurants.models import OpeningHour
+
+        OpeningHour.objects.create(
+            restaurant=restaurant,
+            day_of_week=0,
+            open_time="09:00",
+            close_time="22:30",
+            is_closed=False,
+        )
+        client.force_login(reviewer)
+        favorite_response = client.post(f"/api/v1/restaurants/{restaurant.slug}/favorite/")
+        assert favorite_response.status_code == 201
+
+        response = client.get(f"/api/v1/restaurants/{restaurant.slug}/")
+
+        assert response.status_code == 200
+        payload = response.json()["data"]
+        assert payload["is_favorite"] is True
+        assert payload["favorite_count"] == 1
+        assert payload["favorite_score"] > 0
+        assert payload["opening_hours"][0]["day_of_week"] == 0
+        assert payload["opening_hours"][0]["day_display"] == "Monday"
+        assert payload["opening_hours"][0]["open_time"] == "09:00:00"
+        assert payload["opening_hours"][0]["close_time"] == "22:30:00"
+    finally:
+        restaurant.delete()
+        category.delete()
+        owner.delete()
+        reviewer.delete()
+
+
+def test_favorite_mutations_update_restaurant_metrics():
+    client = Client()
+    reviewer = _create_user(role=UserRole.USER, prefix="metrics-reviewer")
+    restaurant = _create_restaurant(slug="metrics-favorite-restaurant")
+    category = restaurant.categories.first()
+    owner = restaurant.owner
+
+    try:
+        client.force_login(reviewer)
+        create_response = client.post(f"/api/v1/restaurants/{restaurant.slug}/favorite/")
+        restaurant.refresh_from_db()
+
+        assert create_response.status_code == 201
+        assert create_response.json()["data"]["favorite_count"] == 1
+        assert restaurant.favorite_count == 1
+        assert restaurant.favorite_score == 1
+        assert restaurant.last_favorited_at is not None
+
+        delete_response = client.delete(f"/api/v1/restaurants/{restaurant.slug}/favorite/")
+        restaurant.refresh_from_db()
+
+        assert delete_response.status_code == 200
+        assert delete_response.json()["data"]["favorite_count"] == 0
+        assert restaurant.favorite_count == 0
+        assert restaurant.favorite_score == 0
+    finally:
+        restaurant.delete()
+        category.delete()
+        owner.delete()
+        reviewer.delete()
+
+
+def test_owner_dashboard_includes_favorite_metrics():
+    client = Client()
+    owner = _create_user(role=UserRole.OWNER)
+    reviewer = _create_user(role=UserRole.USER, prefix="favorite-dashboard")
+    restaurant = _create_restaurant(owner=owner, slug="favorite-dashboard-restaurant")
+    category = restaurant.categories.first()
+    Favorite.objects.create(user=reviewer, restaurant=restaurant)
+
+    try:
+        restaurant.favorite_count = 1
+        restaurant.favorite_score = 1
+        restaurant.save(update_fields=["favorite_count", "favorite_score"])
+
+        client.force_login(owner)
+        response = client.get("/api/v1/restaurants/mine/dashboard/")
+
+        assert response.status_code == 200
+        payload = response.json()["data"]
+        assert payload["summary"]["favorite_count"] == 1
+        assert payload["restaurants"][0]["favorite_count"] == 1
+        assert payload["restaurants"][0]["favorite_score"] == 1
+    finally:
+        restaurant.delete()
+        category.delete()
+        owner.delete()
+        reviewer.delete()

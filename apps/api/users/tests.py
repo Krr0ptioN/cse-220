@@ -100,3 +100,71 @@ def test_csrf_endpoint_sets_token_cookie():
     assert response.status_code == 200
     assert response.json()["data"]["csrf_token"]
     assert "csrftoken" in client.cookies
+
+
+def test_user_profile_endpoint_returns_profile_fields():
+    client = Client()
+    user = _create_user(prefix="profile-read", display_name="Profile Reader")
+    user.bio = "Tracks weekend brunch spots."
+    user.avatar_url = "https://example.com/avatar.png"
+    user.save(update_fields=["bio", "avatar_url"])
+    client.force_login(user)
+
+    response = client.get("/api/v1/users/me/")
+
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["email"] == user.email
+    assert payload["display_name"] == "Profile Reader"
+    assert payload["bio"] == "Tracks weekend brunch spots."
+    assert payload["avatar_url"] == "https://example.com/avatar.png"
+    assert payload["created_at"]
+    assert payload["updated_at"]
+
+
+def test_user_profile_patch_updates_editable_fields():
+    client = Client()
+    user = _create_user(prefix="profile-update", display_name="Before Update")
+    client.force_login(user)
+    new_username = f"profile-updated-{uuid.uuid4().hex[:8]}"
+
+    response = client.patch(
+        "/api/v1/users/me/",
+        data={
+            "username": new_username,
+            "display_name": "After Update",
+            "bio": "Updated public bio.",
+            "avatar_url": "https://example.com/updated-avatar.png",
+            "role": UserRole.ADMIN,
+        },
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["username"] == new_username
+    assert payload["display_name"] == "After Update"
+    assert payload["bio"] == "Updated public bio."
+    assert payload["avatar_url"] == "https://example.com/updated-avatar.png"
+    assert payload["role"] == UserRole.USER
+
+    user.refresh_from_db()
+    assert user.username == new_username
+    assert user.display_name == "After Update"
+    assert user.role == UserRole.USER
+
+
+def test_user_profile_patch_rejects_duplicate_username():
+    client = Client()
+    existing_user = _create_user(prefix="profile-existing")
+    user = _create_user(prefix="profile-duplicate")
+    client.force_login(user)
+
+    response = client.patch(
+        "/api/v1/users/me/",
+        data={"username": existing_user.username},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "validation_error"

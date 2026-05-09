@@ -6,6 +6,23 @@ export type RestaurantCategory = {
   slug?: string;
 };
 
+export type RestaurantOpeningHour = {
+  id?: string;
+  day_of_week: number;
+  day_display?: string;
+  display_day?: string;
+  open_time?: string | null;
+  close_time?: string | null;
+  is_closed: boolean;
+};
+
+export type RestaurantStatus = {
+  state: 'open' | 'closing-soon' | 'closed' | 'unknown';
+  label: string;
+  detail: string;
+  minutesUntilClose?: number;
+};
+
 export type Restaurant = {
   id: string;
   name: string;
@@ -22,7 +39,26 @@ export type Restaurant = {
   review_count?: number;
   price_range?: string;
   category?: RestaurantCategory;
+  categories?: RestaurantCategory[];
+  opening_hours?: RestaurantOpeningHour[];
+  favorite_count?: number;
+  favorite_score?: number;
+  last_favorited_at?: string | null;
+  is_favorite?: boolean;
   primary_photo_url?: string;
+};
+
+export type MenuItem = {
+  id: string;
+  restaurant_id?: string;
+  name: string;
+  description?: string;
+  category?: RestaurantCategory;
+  price: number;
+  currency: string;
+  image_url?: string;
+  is_available: boolean;
+  sort_order: number;
 };
 
 export type User = {
@@ -30,7 +66,11 @@ export type User = {
   email: string;
   username: string;
   display_name?: string;
+  bio?: string;
+  avatar_url?: string;
   role: 'user' | 'owner' | 'admin';
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type PaginationMeta = {
@@ -45,6 +85,47 @@ export type PaginationMeta = {
 export type RestaurantsResponse = {
   data: Restaurant[];
   pagination: PaginationMeta;
+};
+
+export type OwnerDashboardSummary = {
+  restaurant_count: number;
+  review_count: number;
+  reviewer_count: number;
+  average_rating: number | null;
+  favorite_count?: number;
+  favorite_score?: number;
+};
+
+export type OwnerDashboardReviewerStats = {
+  id: string;
+  username: string;
+  display_name: string;
+  review_count: number;
+  average_rating: number | null;
+  restaurant_count: number;
+  first_review_at: string | null;
+  last_review_at: string | null;
+};
+
+export type OwnerDashboardRatingProgressPoint = {
+  month: string;
+  review_count: number;
+  average_rating: number | null;
+  cumulative_review_count: number;
+  cumulative_average_rating: number | null;
+};
+
+export type OwnerDashboardRestaurant = Omit<Restaurant, 'average_rating' | 'review_count'> & {
+  average_rating: number | null;
+  review_count: number;
+  reviewer_stats: OwnerDashboardReviewerStats[];
+  rating_progress: OwnerDashboardRatingProgressPoint[];
+};
+
+export type OwnerDashboardResponse = {
+  summary: OwnerDashboardSummary;
+  restaurants: OwnerDashboardRestaurant[];
+  reviewers: OwnerDashboardReviewerStats[];
 };
 
 export function getApiBaseUrl(): string {
@@ -84,10 +165,15 @@ export const API_ENDPOINTS = {
   restaurants: {
     list: () => `${getApiBaseUrl()}/api/v1/restaurants/`,
     mine: () => `${getApiBaseUrl()}/api/v1/restaurants/mine/`,
+    dashboard: () => `${getApiBaseUrl()}/api/v1/restaurants/mine/dashboard/`,
     detail: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
     create: () => `${getApiBaseUrl()}/api/v1/restaurants/`,
     update: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
     delete: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
+    menuItems: (slug: string) =>
+      `${getApiBaseUrl()}/api/v1/restaurants/${slug}/menu-items/`,
+    menuItem: (slug: string, menuItemId: string) =>
+      `${getApiBaseUrl()}/api/v1/restaurants/${slug}/menu-items/${menuItemId}/`,
   },
   auth: {
     csrf: () => `${getApiBaseUrl()}/api/v1/auth/csrf/`,
@@ -95,6 +181,9 @@ export const API_ENDPOINTS = {
     login: () => `${getApiBaseUrl()}/api/v1/auth/login/`,
     logout: () => `${getApiBaseUrl()}/api/v1/auth/logout/`,
     me: () => `${getApiBaseUrl()}/api/v1/auth/me/`,
+  },
+  users: {
+    me: () => `${getApiBaseUrl()}/api/v1/users/me/`,
   },
   reviews: {
     list: (restaurantSlug: string) =>
@@ -128,11 +217,19 @@ export function buildRestaurantsUrl(
 
 export async function fetchRestaurantDetail(
   slug: string,
+  cookieHeader?: string | null,
 ): Promise<Restaurant | null> {
+  const headers: Record<string, string> = {};
+  if (cookieHeader) {
+    headers.cookie = cookieHeader;
+  }
+
   const response = await fetch(
     `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,
     {
       cache: 'no-store',
+      headers,
+      credentials: 'include',
     },
   );
 
@@ -144,6 +241,9 @@ export async function fetchRestaurantDetail(
   if (!payload?.data) {
     return null;
   }
+
+  const categories = normalizeCategories(payload.data.categories);
+  const category = payload.data.category ?? categories[0];
 
   return {
     id: payload.data.id ?? slug,
@@ -160,9 +260,34 @@ export async function fetchRestaurantDetail(
     average_rating: toNumber(payload.data.average_rating),
     review_count: toNumber(payload.data.review_count),
     price_range: payload.data.price_range,
-    category: payload.data.category,
+    category,
+    categories,
+    opening_hours: normalizeOpeningHours(payload.data.opening_hours),
+    favorite_count: toNonNegativeInt(payload.data.favorite_count),
+    favorite_score: toNonNegativeInt(payload.data.favorite_score),
+    last_favorited_at: payload.data.last_favorited_at ?? null,
+    is_favorite: Boolean(payload.data.is_favorite),
     primary_photo_url: resolveApiAssetUrl(payload.data.primary_photo_url),
   };
+}
+
+export async function fetchRestaurantMenuItems(
+  slug: string,
+): Promise<MenuItem[]> {
+  try {
+    const response = await fetch(API_ENDPOINTS.restaurants.menuItems(slug), {
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { data?: unknown };
+    return normalizeMenuItems(payload.data);
+  } catch {
+    return [];
+  }
 }
 
 export function normalizeRestaurantsResponse(
@@ -263,6 +388,80 @@ export function getRestaurantImageUrl(
   );
 }
 
+export function getRestaurantStatus(
+  openingHours: RestaurantOpeningHour[] | undefined,
+  now = new Date(),
+): RestaurantStatus {
+  const currentDay = (now.getDay() + 6) % 7;
+  const todayHours = openingHours?.find(
+    (hour) => hour.day_of_week === currentDay,
+  );
+
+  if (todayHours?.is_closed) {
+    return {
+      state: 'closed',
+      label: 'Closed',
+      detail: 'Closed today',
+    };
+  }
+
+  if (!todayHours?.open_time || !todayHours.close_time) {
+    return {
+      state: 'unknown',
+      label: 'Hours unavailable',
+      detail: 'Opening hours are not available',
+    };
+  }
+
+  const openAt = timeOnDate(now, todayHours.open_time);
+  const closeAt = timeOnDate(now, todayHours.close_time);
+
+  if (!openAt || !closeAt) {
+    return {
+      state: 'unknown',
+      label: 'Hours unavailable',
+      detail: 'Opening hours are not available',
+    };
+  }
+
+  if (now < openAt) {
+    return {
+      state: 'closed',
+      label: 'Closed',
+      detail: `Opens at ${formatTime(todayHours.open_time)}`,
+    };
+  }
+
+  if (now >= closeAt) {
+    return {
+      state: 'closed',
+      label: 'Closed',
+      detail: `Closed at ${formatTime(todayHours.close_time)}`,
+    };
+  }
+
+  const minutesUntilClose = Math.max(
+    0,
+    Math.round((closeAt.getTime() - now.getTime()) / 60000),
+  );
+
+  if (minutesUntilClose <= 60) {
+    return {
+      state: 'closing-soon',
+      label: 'Open',
+      detail: `Closes at ${formatTime(todayHours.close_time)}`,
+      minutesUntilClose,
+    };
+  }
+
+  return {
+    state: 'open',
+    label: 'Open',
+    detail: `Open until ${formatTime(todayHours.close_time)}`,
+    minutesUntilClose,
+  };
+}
+
 export function resolveApiAssetUrl(url?: string | null): string {
   const normalizedUrl = url?.trim();
   if (!normalizedUrl) {
@@ -291,6 +490,9 @@ function normalizeRestaurant(
     return null;
   }
 
+  const categories = normalizeCategories(candidate.categories);
+  const category = candidate.category ?? categories[0];
+
   return {
     id: candidate.id ?? candidate.slug,
     name: candidate.name,
@@ -306,9 +508,107 @@ function normalizeRestaurant(
     average_rating: toNumber(candidate.average_rating),
     review_count: toNumber(candidate.review_count),
     price_range: candidate.price_range,
-    category: candidate.category,
+    category,
+    categories,
+    opening_hours: normalizeOpeningHours(candidate.opening_hours),
+    favorite_count: toNonNegativeInt(candidate.favorite_count),
+    favorite_score: toNonNegativeInt(candidate.favorite_score),
+    last_favorited_at: candidate.last_favorited_at ?? null,
+    is_favorite: Boolean(candidate.is_favorite),
     primary_photo_url: resolveApiAssetUrl(candidate.primary_photo_url),
   };
+}
+
+export function normalizeMenuItems(payload: unknown): MenuItem[] {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+
+  return payload
+    .map((item) => normalizeMenuItem(item))
+    .filter((item): item is MenuItem => item !== null)
+    .sort(compareMenuItems);
+}
+
+function normalizeMenuItem(candidate: unknown): MenuItem | null {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    return null;
+  }
+
+  const item = candidate as Partial<MenuItem>;
+  if (!item.id || !item.name) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    restaurant_id: item.restaurant_id,
+    name: item.name,
+    description: item.description,
+    category: item.category,
+    price: toNumber(item.price) ?? 0,
+    currency: normalizeCurrency(item.currency),
+    image_url: resolveApiAssetUrl(item.image_url),
+    is_available: item.is_available !== false,
+    sort_order: toNumber(item.sort_order) ?? 0,
+  };
+}
+
+function compareMenuItems(first: MenuItem, second: MenuItem): number {
+  if (first.sort_order !== second.sort_order) {
+    return first.sort_order - second.sort_order;
+  }
+
+  return first.name.localeCompare(second.name);
+}
+
+function normalizeCategories(value: unknown): RestaurantCategory[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (category): category is RestaurantCategory =>
+      Boolean(category && typeof category === 'object' && !Array.isArray(category)),
+  );
+}
+
+function normalizeOpeningHours(value: unknown): RestaurantOpeningHour[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isRestaurantOpeningHour)
+    .sort((first, second) => first.day_of_week - second.day_of_week);
+}
+
+function isRestaurantOpeningHour(item: unknown): item is RestaurantOpeningHour {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return false;
+  }
+
+  const candidate = item as Partial<RestaurantOpeningHour>;
+  const dayOfWeek = candidate.day_of_week;
+  if (typeof dayOfWeek !== 'number' || !Number.isInteger(dayOfWeek)) {
+    return false;
+  }
+
+  return dayOfWeek >= 0 && dayOfWeek <= 6 && typeof candidate.is_closed === 'boolean';
+}
+
+function normalizeCurrency(value: unknown): string {
+  if (typeof value !== 'string') {
+    return 'EUR';
+  }
+
+  const currency = value.trim().toUpperCase();
+  return currency || 'EUR';
+}
+
+function toNonNegativeInt(value: unknown): number {
+  const numeric = toNumber(value);
+  return numeric === undefined ? 0 : Math.max(0, Math.floor(numeric));
 }
 
 function toNumber(value: unknown): number | undefined {
@@ -324,4 +624,35 @@ function toNumber(value: unknown): number | undefined {
   }
 
   return undefined;
+}
+
+function timeOnDate(date: Date, time: string): Date | null {
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(time.trim());
+  if (!match) {
+    return null;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) {
+    return null;
+  }
+
+  const result = new Date(date);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+}
+
+function formatTime(time: string): string {
+  const match = /^(\d{1,2}):(\d{2})(?::\d{2})?$/.exec(time.trim());
+  if (!match) {
+    return time;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = match[2];
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+
+  return `${displayHours}:${minutes} ${period}`;
 }

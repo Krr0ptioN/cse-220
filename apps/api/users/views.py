@@ -7,7 +7,12 @@ from rest_framework.views import APIView
 
 from api.exceptions import ApiError
 from api.rest import api_data, require_authenticated_user
-from users.serializers import LoginSerializer, RegisterSerializer, UserPublicSerializer
+from users.serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    UserProfileUpdateSerializer,
+    UserPublicSerializer,
+)
 from users.services import UserService
 
 
@@ -22,6 +27,16 @@ class UsersController(APIView):
     def get(self, request):
         user = require_authenticated_user(request)
         return api_data(self.get_service().me(user))
+
+    def patch(self, request):
+        user = require_authenticated_user(request)
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated_user = self.get_service().update_profile(
+            user,
+            serializer.validated_data,
+        )
+        return api_data(UserPublicSerializer(updated_user).data)
 
 
 class CsrfController(APIView):
