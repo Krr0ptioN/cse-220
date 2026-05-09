@@ -164,6 +164,7 @@ function normalizeClientApiBaseUrl(baseUrl: string): string {
 export const API_ENDPOINTS = {
   restaurants: {
     list: () => `${getApiBaseUrl()}/api/v1/restaurants/`,
+    homepage: () => `${getApiBaseUrl()}/api/v1/restaurants/homepage/`,
     mine: () => `${getApiBaseUrl()}/api/v1/restaurants/mine/`,
     dashboard: () => `${getApiBaseUrl()}/api/v1/restaurants/mine/dashboard/`,
     detail: (slug: string) => `${getApiBaseUrl()}/api/v1/restaurants/${slug}/`,

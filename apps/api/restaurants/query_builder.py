@@ -1,3 +1,5 @@
+from django.db.models import Q
+
 from restaurants.models import Restaurant
 
 
@@ -25,6 +27,7 @@ class RestaurantQueryBuilder:
         city = filters.get("city")
         price_range = filters.get("price_range")
         min_rating = filters.get("min_rating")
+        search = filters.get("search")
 
         if category:
             self.queryset = self.queryset.filter(
@@ -46,10 +49,32 @@ class RestaurantQueryBuilder:
                 average_rating__gte=min_rating
             )
 
-        if category:
+        if search:
+            self.queryset = self._apply_search(search)
+
+        if category or search:
             self.queryset = self.queryset.distinct()
 
         return self
+
+    def _apply_search(self, search: str):
+        terms = [term.strip() for term in str(search).split() if term.strip()]
+        query = Q()
+
+        for term in terms:
+            query |= (
+                Q(name__icontains=term)
+                | Q(description__icontains=term)
+                | Q(city__icontains=term)
+                | Q(district__icontains=term)
+                | Q(categories__name__icontains=term)
+                | Q(categories__slug__icontains=term)
+            )
+
+        if query:
+            self.queryset = self.queryset.filter(query)
+
+        return self.queryset
 
     def apply_sort(self, sort: str | None = None):
         SORT_MAP = {

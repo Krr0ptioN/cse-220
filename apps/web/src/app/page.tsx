@@ -8,9 +8,10 @@ import {
   RiStarLine,
 } from '@remixicon/react';
 import { SearchBox } from '@flavor-map/ui-module-discovery';
+import { getHomepageDiscovery } from '@flavor-map/ui-module-discovery/server';
 
 import {
-  buildRestaurantsUrl,
+  API_ENDPOINTS,
   getRestaurantImageUrl,
   normalizeRestaurantsResponse,
   type Restaurant,
@@ -27,20 +28,17 @@ const categories = [
 const filters = ['Top rated', 'Open now', 'Most reviewed', 'Nearby'];
 
 export default async function Index() {
-  const restaurants = await loadFeaturedRestaurants();
-  const topRated = [...restaurants]
-    .sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0))
-    .slice(0, 3);
-  const popular = restaurants.slice(0, 2);
-  const totalReviews = restaurants.reduce(
+  const { topRated, newest } = await loadHomepageRestaurants();
+  const featuredRestaurants = uniqueRestaurants([...topRated, ...newest]);
+  const totalReviews = featuredRestaurants.reduce(
     (total, restaurant) => total + (restaurant.review_count ?? 0),
     0,
   );
-  const averageRating = restaurants.length
-    ? restaurants.reduce(
+  const averageRating = featuredRestaurants.length
+    ? featuredRestaurants.reduce(
         (total, restaurant) => total + (restaurant.average_rating ?? 0),
         0,
-      ) / restaurants.length
+      ) / featuredRestaurants.length
     : 0;
 
   return (
@@ -101,9 +99,9 @@ export default async function Index() {
             ))}
           </div>
 
-          <DiscoverySection title="Top-rated right now" href="/restaurants">
+          <DiscoverySection title="Top Rated" href="/restaurants?sort=rating">
             {topRated.length ? (
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 {topRated.map((restaurant) => (
                   <RestaurantCard key={restaurant.id} restaurant={restaurant} />
                 ))}
@@ -113,10 +111,10 @@ export default async function Index() {
             )}
           </DiscoverySection>
 
-          <DiscoverySection title="Popular nearby" href="/restaurants">
-            {popular.length ? (
+          <DiscoverySection title="Newest" href="/restaurants?sort=newest">
+            {newest.length ? (
               <div className="grid gap-4 md:grid-cols-2">
-                {popular.map((restaurant) => (
+                {newest.map((restaurant) => (
                   <RestaurantPreview key={restaurant.id} restaurant={restaurant} />
                 ))}
               </div>
@@ -131,8 +129,8 @@ export default async function Index() {
             <div className="rounded-[1.5rem] bg-white/10 p-4">
               <p className="text-sm text-background/70">Restaurant discovery</p>
               <h2 className="mt-2 text-2xl font-semibold">
-                {restaurants.length
-                  ? `${restaurants.length} reviewed spots`
+                {featuredRestaurants.length
+                  ? `${featuredRestaurants.length} featured spots`
                   : 'Start with the map'}
               </h2>
               <p className="mt-2 text-sm leading-6 text-background/70">
@@ -141,7 +139,7 @@ export default async function Index() {
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <Metric label="Restaurants" value={String(restaurants.length)} />
+              <Metric label="Restaurants" value={String(featuredRestaurants.length)} />
               <Metric
                 label="Avg rating"
                 value={averageRating ? averageRating.toFixed(1) : 'N/A'}
@@ -163,20 +161,51 @@ export default async function Index() {
   );
 }
 
-async function loadFeaturedRestaurants(): Promise<Restaurant[]> {
+async function loadHomepageRestaurants(): Promise<{
+  topRated: Restaurant[];
+  newest: Restaurant[];
+}> {
   try {
-    const response = await fetch(buildRestaurantsUrl(1, 6), {
-      cache: 'no-store',
-    });
+    const sections = await getHomepageDiscovery<Partial<Restaurant>>(
+      async (url) => {
+        const response = await fetch(url, { cache: 'no-store' });
 
-    if (!response.ok) {
-      return [];
+        if (!response.ok) {
+          return {};
+        }
+
+        const payload = (await response.json().catch(() => null)) as {
+          data?: unknown;
+        } | null;
+
+        return (payload?.data ?? {}) as Partial<{
+          top_rated: Partial<Restaurant>[];
+          newest: Partial<Restaurant>[];
+        }>;
+      },
+      API_ENDPOINTS.restaurants.homepage(),
+    );
+
+    return {
+      topRated: normalizeRestaurantsResponse({ data: sections.top_rated }).data,
+      newest: normalizeRestaurantsResponse({ data: sections.newest }).data,
+    };
+  } catch {
+    return { topRated: [], newest: [] };
+  }
+}
+
+function uniqueRestaurants(restaurants: Restaurant[]): Restaurant[] {
+  const seen = new Set<string>();
+
+  return restaurants.filter((restaurant) => {
+    if (seen.has(restaurant.id)) {
+      return false;
     }
 
-    return normalizeRestaurantsResponse(await response.json()).data;
-  } catch {
-    return [];
-  }
+    seen.add(restaurant.id);
+    return true;
+  });
 }
 
 function DiscoverySection({
