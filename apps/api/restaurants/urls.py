@@ -1,6 +1,6 @@
 from django.urls import path
 
-from restaurants.views import (
+from .controllers import (
     OwnerDashboardController,
     OwnerRestaurantsController,
     RestaurantDetailController,
@@ -10,15 +10,12 @@ from restaurants.views import (
     RestaurantPhotosController,
     RestaurantMenuItemDetailController,
     RestaurantMenuItemsController,
+    ReviewerFavoriteRestaurantListController,
+    ReviewerFavoriteRestaurantController,
     RestaurantsController
 )
 
 from reviews.views import RestaurantReviewsController
-
-from .controllers import (
-    ReviewerFavoriteRestaurantListController,
-    ReviewerFavoriteRestaurantController
-) 
 
 urlpatterns = [
     path("", RestaurantsController.as_view(), name="restaurants-list"),
