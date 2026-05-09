@@ -4,6 +4,7 @@ import pytest
 from django.test import Client
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.test.utils import override_settings
+from django.utils import timezone
 
 from restaurants.models import Favorite, MenuItem, Restaurant
 from users.models import UserRole
@@ -150,6 +151,106 @@ def test_restaurant_list_marks_favorite_state_for_authenticated_user():
         favorite_category.delete()
         unfavorite_category.delete()
         user.delete()
+
+
+def test_restaurant_list_filters_by_search_query():
+    client = Client()
+    match_by_name = _create_restaurant(
+        slug="search-ada-bistro",
+        name_prefix="Ada Bistro",
+        city="Istanbul",
+        district="Kadikoy",
+    )
+    match_by_area = _create_restaurant(
+        slug="search-besiktas-table",
+        name_prefix="Harbor Table",
+        city="Istanbul",
+        district="Besiktas",
+    )
+    excluded = _create_restaurant(
+        slug="search-hidden-spot",
+        name_prefix="Hidden Spot",
+        city="Ankara",
+        district="Cankaya",
+    )
+    categories = [
+        match_by_name.categories.first(),
+        match_by_area.categories.first(),
+        excluded.categories.first(),
+    ]
+    owners = [match_by_name.owner, match_by_area.owner, excluded.owner]
+
+    try:
+        response = client.get("/api/v1/restaurants/", {"q": "ada besiktas"})
+
+        assert response.status_code == 200
+        slugs = {item["slug"] for item in response.json()["data"]}
+        assert slugs == {match_by_name.slug, match_by_area.slug}
+    finally:
+        match_by_name.delete()
+        match_by_area.delete()
+        excluded.delete()
+        for category in categories:
+            category.delete()
+        for owner in owners:
+            owner.delete()
+
+
+def test_restaurant_homepage_returns_top_rated_and_newest_sections():
+    client = Client()
+    restaurants = [
+        _create_restaurant(
+            slug=f"homepage-restaurant-{index}",
+            average_rating=rating,
+            review_count=10 + index,
+        )
+        for index, rating in enumerate([4.1, 4.9, 3.8, 4.7, 4.3, 4.8])
+    ]
+    categories = [restaurant.categories.first() for restaurant in restaurants]
+    owners = [restaurant.owner for restaurant in restaurants]
+    now = timezone.now()
+
+    try:
+        for index, restaurant in enumerate(restaurants):
+            Restaurant.objects.filter(pk=restaurant.pk).update(
+                created_at=now - timezone.timedelta(days=index),
+            )
+
+        response = client.get("/api/v1/restaurants/homepage/")
+
+        assert response.status_code == 200
+        payload = response.json()["data"]
+        assert set(payload.keys()) == {"top_rated", "newest"}
+        assert [item["slug"] for item in payload["top_rated"]] == [
+            "homepage-restaurant-1",
+            "homepage-restaurant-5",
+            "homepage-restaurant-3",
+            "homepage-restaurant-4",
+            "homepage-restaurant-0",
+        ]
+        assert [item["slug"] for item in payload["newest"]] == [
+            "homepage-restaurant-0",
+            "homepage-restaurant-1",
+            "homepage-restaurant-2",
+            "homepage-restaurant-3",
+            "homepage-restaurant-4",
+        ]
+    finally:
+        for restaurant in restaurants:
+            restaurant.delete()
+        for category in categories:
+            category.delete()
+        for owner in owners:
+            owner.delete()
+
+
+def test_restaurant_homepage_returns_empty_sections_when_no_restaurants():
+    client = Client()
+
+    response = client.get("/api/v1/restaurants/homepage/")
+
+    assert response.status_code == 200
+    assert response.json()["data"] == {"top_rated": [], "newest": []}
 
 
 def test_category_list_no_auth_required():

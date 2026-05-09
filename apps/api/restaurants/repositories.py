@@ -20,6 +20,20 @@ class RestaurantRepository:
             .build()
         )
 
+    def list_homepage_top_rated(self, *, limit: int = 5):
+        return (
+            Restaurant.objects.select_related("owner", "primary_photo")
+            .prefetch_related("categories", "opening_hours")
+            .order_by("-average_rating", "-review_count", "name")[:limit]
+        )
+
+    def list_homepage_newest(self, *, limit: int = 5):
+        return (
+            Restaurant.objects.select_related("owner", "primary_photo")
+            .prefetch_related("categories", "opening_hours")
+            .order_by("-created_at", "name")[:limit]
+        )
+
     def list_categories(self):
         return Category.objects.all()
 

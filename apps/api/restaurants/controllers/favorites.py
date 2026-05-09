@@ -36,6 +36,7 @@ class ReviewerFavoriteRestaurantListController(APIView):
             "price": request.query_params.get("price"),
             "price_range": request.query_params.get("price_range"),
             "min_rating": request.query_params.get("min_rating"),
+            "search": request.query_params.get("q") or request.query_params.get("search"),
         }
 
         sort = request.query_params.get("sort")

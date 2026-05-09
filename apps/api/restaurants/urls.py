@@ -4,6 +4,7 @@ from restaurants.views import (
     OwnerDashboardController,
     OwnerRestaurantsController,
     RestaurantDetailController,
+    RestaurantHomepageController,
     RestaurantMenuItemDetailController,
     RestaurantMenuItemsController,
     RestaurantsController
@@ -18,6 +19,7 @@ from .controllers import (
 
 urlpatterns = [
     path("", RestaurantsController.as_view(), name="restaurants-list"),
+    path("homepage/", RestaurantHomepageController.as_view(), name="restaurants-homepage"),
     path(
         "favorites/",
         ReviewerFavoriteRestaurantListController.as_view(),

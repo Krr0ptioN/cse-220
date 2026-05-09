@@ -101,6 +101,7 @@ class RestaurantsController(APIView):
             "price": request.query_params.get("price"),
             "price_range": request.query_params.get("price_range"),
             "min_rating": request.query_params.get("min_rating"),
+            "search": request.query_params.get("q") or request.query_params.get("search"),
         }
 
         sort = request.query_params.get("sort")
@@ -166,6 +167,32 @@ class CategoryListController(APIView):
     def get(self, request):
         categories = self.get_service().list_categories()
         return api_data(CategorySerializer(categories, many=True).data)
+
+
+class RestaurantHomepageController(APIView):
+    """Return homepage discovery sections."""
+
+    service_class = RestaurantService
+
+    def get_service(self) -> RestaurantService:
+        return self.service_class()
+
+    def get(self, request):
+        sections = self.get_service().get_homepage_sections(limit=5)
+        return api_data(
+            {
+                "top_rated": RestaurantSerializer(
+                    sections["top_rated"],
+                    many=True,
+                    context={"request": request},
+                ).data,
+                "newest": RestaurantSerializer(
+                    sections["newest"],
+                    many=True,
+                    context={"request": request},
+                ).data,
+            }
+        )
 
 
 class OwnerRestaurantsController(APIView):

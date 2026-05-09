@@ -53,6 +53,10 @@ class RestaurantService:
         if city:
             normalized["city"] = str(city).strip()
 
+        search = filters.get("search")
+        if search:
+            normalized["search"] = str(search).strip()
+
         price_range = filters.get("price_range") or filters.get("price")
         if price_range:
             price_range = str(price_range).strip()
@@ -88,6 +92,12 @@ class RestaurantService:
 
     def list_categories(self):
         return self.repository.list_categories()
+
+    def get_homepage_sections(self, *, limit: int = 5):
+        return {
+            "top_rated": list(self.repository.list_homepage_top_rated(limit=limit)),
+            "newest": list(self.repository.list_homepage_newest(limit=limit)),
+        }
 
     def list_owned_restaurants(self, user):
         if user.role != UserRole.OWNER:
