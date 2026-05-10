@@ -7,6 +7,7 @@ from api.rest import (
     api_data,
     require_authenticated_user,
 )
+from .common import pagination_and_filter_parameters
 from restaurants.serializers import (
     RestaurantSerializer,
     RestaurantUpdateSerializer,
@@ -36,31 +37,7 @@ class RestaurantsController(APIView):
             "advanced restaurant filters, and relation expansion through query parameters."
         ),
         parameters=[
-            OpenApiParameter(
-                "page",
-                OpenApiTypes.INT,
-                description="A page number within the paginated result set.",
-            ),
-            OpenApiParameter(
-                "page_size",
-                OpenApiTypes.INT,
-                description="Number of results to return per page.",
-            ),
-            OpenApiParameter(
-                "include",
-                OpenApiTypes.STR,
-                description="Comma-separated list of fields to include in the response.",
-            ),
-            OpenApiParameter(
-                "with",
-                OpenApiTypes.STR,
-                description="Comma-separated list of relations to expand.",
-            ),
-            OpenApiParameter(
-                "omit",
-                OpenApiTypes.STR,
-                description="Comma-separated list of fields to exclude from the response.",
-            ),
+            *pagination_and_filter_parameters,
             OpenApiParameter(
                 "category",
                 OpenApiTypes.STR,
@@ -71,21 +48,6 @@ class RestaurantsController(APIView):
                 OpenApiTypes.STR,
                 description="Filter restaurants by city. Case-insensitive.",
             ),
-            OpenApiParameter(
-                "price",
-                OpenApiTypes.STR,
-                description="Filter restaurants by price range: 1, 2, or 3.",
-            ),
-            OpenApiParameter(
-                "price_range",
-                OpenApiTypes.STR,
-                description="Alias for price. Filter restaurants by price range: 1, 2, or 3.",
-            ),
-            OpenApiParameter(
-                "min_rating",
-                OpenApiTypes.NUMBER,
-                description="Filter restaurants with average rating greater than or equal to this value.",
-            ),
         ],
         responses={200: RestaurantSerializer(many=True)},
         tags=["Restaurants"],
@@ -94,25 +56,30 @@ class RestaurantsController(APIView):
         filters = {
             "category": request.query_params.get("category"),
             "city": request.query_params.get("city"),
+            "location": request.query_params.get("location"),
             "price": request.query_params.get("price"),
             "price_range": request.query_params.get("price_range"),
             "min_rating": request.query_params.get("min_rating"),
+            "latitude": request.query_params.get("latitude") or request.query_params.get("lat"),
+            "longitude": request.query_params.get("longitude") or request.query_params.get("lng"),
             "search": request.query_params.get("q") or request.query_params.get("search"),
         }
 
         sort = request.query_params.get("sort")
         queryset = self.get_service().list_restaurants(filters, sort=sort)
-        if request.user.is_authenticated:
-            queryset = queryset.annotate(
-                is_favorite_for_user=Exists(
-                    Favorite.objects.filter(
-                        restaurant_id=OuterRef("pk"),
-                        user=request.user,
-                    )
-                )
-            )
 
         page_obj, pagination = paginate_queryset(queryset, request)
+        page_items = list(page_obj.object_list)
+
+        if request.user.is_authenticated and page_items:
+            favorite_ids = set(
+                Favorite.objects.filter(
+                    restaurant_id__in=[restaurant.id for restaurant in page_items],
+                    user=request.user,
+                ).values_list("restaurant_id", flat=True)
+            )
+            for restaurant in page_items:
+                setattr(restaurant, "is_favorite_for_user", restaurant.id in favorite_ids)
 
         include_fields = parse_csv_param(request.query_params.get("include"))
         with_fields = parse_csv_param(request.query_params.get("with"))
@@ -123,7 +90,7 @@ class RestaurantsController(APIView):
         omit_fields = parse_csv_param(request.query_params.get("omit")) or None
 
         serializer = RestaurantSerializer(
-            page_obj.object_list,
+            page_items,
             many=True,
             include=include_fields,
             omit=omit_fields,

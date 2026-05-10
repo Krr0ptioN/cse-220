@@ -270,6 +270,74 @@ def test_restaurant_list_filters_by_search_query():
             owner.delete()
 
 
+def test_restaurant_list_filters_by_location_and_sorts_by_distance():
+    client = Client()
+    origin = {"latitude": 41.0082, "longitude": 28.9784}
+    closest = _create_restaurant(
+        slug="geo-closest",
+        name_prefix="Closest Place",
+        city="Istanbul",
+        district="Kadikoy",
+        latitude=41.009,
+        longitude=28.979,
+    )
+    farthest = _create_restaurant(
+        slug="geo-farthest",
+        name_prefix="Farthest Place",
+        city="Istanbul",
+        district="Besiktas",
+        latitude=41.04,
+        longitude=29.02,
+    )
+    unrelated = _create_restaurant(
+        slug="geo-unrelated",
+        name_prefix="Unrelated Place",
+        city="Ankara",
+        district="Cankaya",
+        latitude=39.92,
+        longitude=32.85,
+    )
+    categories = [
+        closest.categories.first(),
+        farthest.categories.first(),
+        unrelated.categories.first(),
+    ]
+    owners = [closest.owner, farthest.owner, unrelated.owner]
+
+    try:
+        response = client.get(
+            "/api/v1/restaurants/",
+            {
+                "location": "Istanbul",
+                "lat": str(origin["latitude"]),
+                "lng": str(origin["longitude"]),
+                "sort": "distance",
+            },
+        )
+
+        assert response.status_code == 200
+        payload = response.json()
+        slugs = [item["slug"] for item in payload["data"]]
+        assert slugs[0] == closest.slug
+        assert farthest.slug in slugs
+        assert unrelated.slug not in slugs
+
+        distances = {
+            item["slug"]: item["distance_km"]
+            for item in payload["data"]
+        }
+        assert distances[closest.slug] is not None
+        assert distances[closest.slug] < distances[farthest.slug]
+    finally:
+        closest.delete()
+        farthest.delete()
+        unrelated.delete()
+        for category in categories:
+            category.delete()
+        for owner in owners:
+            owner.delete()
+
+
 def test_restaurant_homepage_returns_top_rated_and_newest_sections():
     client = Client()
     restaurants = [

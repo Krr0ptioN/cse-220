@@ -10,6 +10,7 @@ from api.exceptions import ApiError
 from files.services import create_file_service
 from restaurants.serializers import RestaurantSerializer
 from restaurants.repositories import RestaurantRepository
+from restaurants.search.geospatial import GeospatialRestaurantSearchEngine, GeoDiscoveryRequest
 from reviews.models import Review
 from users.models import UserRole
 
@@ -18,15 +19,24 @@ class RestaurantService:
     """Coordinates restaurant endpoint behavior."""
 
     repository_class = RestaurantRepository
+    search_engine_class = GeospatialRestaurantSearchEngine
 
     def __init__(self, repository: RestaurantRepository | None = None) -> None:
         self.repository = repository or self.repository_class()
+        self.search_engine = self.search_engine_class()
         self.file_service = create_file_service()
 
 
     def list_restaurants(self, filters: dict | None = None, sort: str | None = None):
         normalized_filters = self._normalize_restaurant_filters(filters or {})
-        return self.repository.list_restaurants(filters=normalized_filters, sort=sort)
+        queryset = self.repository.list_restaurants(filters=normalized_filters, sort=sort)
+        discovery_request = GeoDiscoveryRequest(
+            location=normalized_filters.get("location"),
+            latitude=normalized_filters.get("latitude"),
+            longitude=normalized_filters.get("longitude"),
+            sort=sort,
+        )
+        return self.search_engine.search(queryset, request=discovery_request)
 
     def list_favorite_restaurants(
         self,
@@ -36,11 +46,18 @@ class RestaurantService:
     ):
         normalized_filters = self._normalize_restaurant_filters(filters or {})
 
-        return self.repository.list_favorite_restaurants(
+        queryset = self.repository.list_favorite_restaurants(
             user=user,
             filters=normalized_filters,
             sort=sort,
         )
+        discovery_request = GeoDiscoveryRequest(
+            location=normalized_filters.get("location"),
+            latitude=normalized_filters.get("latitude"),
+            longitude=normalized_filters.get("longitude"),
+            sort=sort,
+        )
+        return self.search_engine.search(queryset, request=discovery_request)
 
     def _normalize_restaurant_filters(self, filters: dict) -> dict:
         normalized: dict = {}
@@ -53,9 +70,18 @@ class RestaurantService:
         if city:
             normalized["city"] = str(city).strip()
 
+        location = filters.get("location")
+        if location:
+            normalized["location"] = str(location).strip()
+
         search = filters.get("search")
         if search:
             normalized["search"] = str(search).strip()
+
+        latitude, longitude = self._extract_coordinates(filters)
+        if latitude is not None and longitude is not None:
+            normalized["latitude"] = latitude
+            normalized["longitude"] = longitude
 
         price_range = filters.get("price_range") or filters.get("price")
         if price_range:
@@ -89,6 +115,66 @@ class RestaurantService:
             normalized["min_rating"] = min_rating_value
 
         return normalized
+
+    def _extract_coordinates(self, filters: dict) -> tuple[float | None, float | None]:
+        latitude_value = filters.get("latitude")
+        longitude_value = filters.get("longitude")
+        lat_alias = filters.get("lat")
+        lng_alias = filters.get("lng")
+
+        if lat_alias not in (None, "") or lng_alias not in (None, ""):
+            latitude_value = lat_alias
+            longitude_value = lng_alias
+
+        has_latitude = latitude_value not in (None, "")
+        has_longitude = longitude_value not in (None, "")
+        if has_latitude != has_longitude:
+            raise ApiError(
+                status_code=400,
+                code="invalid_filter",
+                detail="latitude and longitude must be provided together.",
+            )
+
+        if not has_latitude:
+            return None, None
+
+        return self._normalize_latitude(latitude_value), self._normalize_longitude(longitude_value)
+
+    def _normalize_latitude(self, value: object) -> float:
+        try:
+            latitude = float(str(value).strip())
+        except (TypeError, ValueError):
+            raise ApiError(
+                status_code=400,
+                code="invalid_filter",
+                detail="latitude must be a number between -90 and 90.",
+            ) from None
+
+        if latitude < -90 or latitude > 90:
+            raise ApiError(
+                status_code=400,
+                code="invalid_filter",
+                detail="latitude must be a number between -90 and 90.",
+            )
+        return latitude
+
+    def _normalize_longitude(self, value: object) -> float:
+        try:
+            longitude = float(str(value).strip())
+        except (TypeError, ValueError):
+            raise ApiError(
+                status_code=400,
+                code="invalid_filter",
+                detail="longitude must be a number between -180 and 180.",
+            ) from None
+
+        if longitude < -180 or longitude > 180:
+            raise ApiError(
+                status_code=400,
+                code="invalid_filter",
+                detail="longitude must be a number between -180 and 180.",
+            )
+        return longitude
 
     def list_categories(self):
         return self.repository.list_categories()

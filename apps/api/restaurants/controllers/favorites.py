@@ -33,9 +33,12 @@ class ReviewerFavoriteRestaurantListController(APIView):
         filters = {
             "category": request.query_params.get("category"),
             "city": request.query_params.get("city"),
+            "location": request.query_params.get("location"),
             "price": request.query_params.get("price"),
             "price_range": request.query_params.get("price_range"),
             "min_rating": request.query_params.get("min_rating"),
+            "latitude": request.query_params.get("latitude") or request.query_params.get("lat"),
+            "longitude": request.query_params.get("longitude") or request.query_params.get("lng"),
             "search": request.query_params.get("q") or request.query_params.get("search"),
         }
 
