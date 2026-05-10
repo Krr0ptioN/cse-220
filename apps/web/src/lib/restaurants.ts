@@ -1,12 +1,12 @@
-import { env } from './env';
+import { getApiBaseUrl } from "ui-common";
 
-export type RestaurantCategory = {
+export interface RestaurantCategory {
   id?: string;
   name?: string;
   slug?: string;
-};
+}
 
-export type RestaurantOpeningHour = {
+export interface RestaurantOpeningHour {
   id?: string;
   day_of_week: number;
   day_display?: string;
@@ -14,25 +14,27 @@ export type RestaurantOpeningHour = {
   open_time?: string | null;
   close_time?: string | null;
   is_closed: boolean;
-};
+}
 
-export type RestaurantStatus = {
-  state: 'open' | 'closing-soon' | 'closed' | 'unknown';
+type RestaurantState = 'open' | 'closing-soon' | 'closed' | 'unknown';
+
+export interface RestaurantStatus {
+  state: RestaurantState;
   label: string;
   detail: string;
   minutesUntilClose?: number;
 };
 
-export type RestaurantPhoto = {
+export interface RestaurantPhoto {
   id: string;
   url: string;
   caption?: string;
   sort_order?: number;
   is_primary?: boolean;
   created_at?: string;
-};
+}
 
-export type Restaurant = {
+export interface Restaurant {
   id: string;
   name: string;
   slug: string;
@@ -46,6 +48,7 @@ export type Restaurant = {
   phone?: string;
   average_rating?: number;
   review_count?: number;
+  distance_km?: number;
   price_range?: string;
   category?: RestaurantCategory;
   categories?: RestaurantCategory[];
@@ -56,9 +59,9 @@ export type Restaurant = {
   is_favorite?: boolean;
   primary_photo_url?: string;
   photos?: RestaurantPhoto[];
-};
+}
 
-export type MenuItem = {
+export interface MenuItem {
   id: string;
   restaurant_id?: string;
   name: string;
@@ -69,44 +72,33 @@ export type MenuItem = {
   image_url?: string;
   is_available: boolean;
   sort_order: number;
-};
+}
 
-export type User = {
-  id: string;
-  email: string;
-  username: string;
-  display_name?: string;
-  bio?: string;
-  avatar_url?: string;
-  role: 'user' | 'owner' | 'admin';
-  created_at?: string;
-  updated_at?: string;
-};
 
-export type PaginationMeta = {
+export interface PaginationMeta {
   page: number;
   page_size: number;
   total: number;
   total_pages: number;
   has_next: boolean;
   has_previous: boolean;
-};
+}
 
-export type RestaurantsResponse = {
+export interface RestaurantsResponse {
   data: Restaurant[];
   pagination: PaginationMeta;
-};
+}
 
-export type OwnerDashboardSummary = {
+export interface OwnerDashboardSummary {
   restaurant_count: number;
   review_count: number;
   reviewer_count: number;
   average_rating: number | null;
   favorite_count?: number;
   favorite_score?: number;
-};
+}
 
-export type OwnerDashboardReviewerStats = {
+export interface OwnerDashboardReviewerStats {
   id: string;
   username: string;
   display_name: string;
@@ -115,15 +107,15 @@ export type OwnerDashboardReviewerStats = {
   restaurant_count: number;
   first_review_at: string | null;
   last_review_at: string | null;
-};
+}
 
-export type OwnerDashboardRatingProgressPoint = {
+export interface OwnerDashboardRatingProgressPoint {
   month: string;
   review_count: number;
   average_rating: number | null;
   cumulative_review_count: number;
   cumulative_average_rating: number | null;
-};
+}
 
 export type OwnerDashboardRestaurant = Omit<Restaurant, 'average_rating' | 'review_count'> & {
   average_rating: number | null;
@@ -138,38 +130,6 @@ export type OwnerDashboardResponse = {
   reviewers: OwnerDashboardReviewerStats[];
 };
 
-export function getApiBaseUrl(): string {
-  const configuredBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  if (configuredBaseUrl && configuredBaseUrl.trim()) {
-    return normalizeClientApiBaseUrl(configuredBaseUrl.replace(/\/$/, ''));
-  }
-
-  return normalizeClientApiBaseUrl(env.apiBaseUrl);
-}
-
-function normalizeClientApiBaseUrl(baseUrl: string): string {
-  if (typeof window === 'undefined') {
-    return baseUrl;
-  }
-
-  const browserHost = window.location.hostname;
-  if (browserHost === 'localhost' || browserHost === '127.0.0.1') {
-    return baseUrl;
-  }
-
-  try {
-    const url = new URL(baseUrl);
-    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-      url.hostname = browserHost;
-      return url.toString().replace(/\/$/, '');
-    }
-  } catch {
-    return baseUrl;
-  }
-
-  return baseUrl;
-}
 
 export const API_ENDPOINTS = {
   restaurants: {
@@ -191,13 +151,6 @@ export const API_ENDPOINTS = {
     primaryPhoto: (slug: string, photoId: string) =>
       `${getApiBaseUrl()}/api/v1/restaurants/${slug}/photos/${photoId}/primary/`,
   },
-  auth: {
-    csrf: () => `${getApiBaseUrl()}/api/v1/auth/csrf/`,
-    register: () => `${getApiBaseUrl()}/api/v1/auth/register/`,
-    login: () => `${getApiBaseUrl()}/api/v1/auth/login/`,
-    logout: () => `${getApiBaseUrl()}/api/v1/auth/logout/`,
-    me: () => `${getApiBaseUrl()}/api/v1/auth/me/`,
-  },
   users: {
     me: () => `${getApiBaseUrl()}/api/v1/users/me/`,
     avatar: () => `${getApiBaseUrl()}/api/v1/users/me/avatar/`,
@@ -213,20 +166,52 @@ export const API_ENDPOINTS = {
   },
 } as const;
 
+export type RestaurantDiscoveryQuery = {
+  query?: string;
+  location?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  sort?: string | null;
+  price?: string | null;
+  minRating?: number | null;
+};
+
 export function buildRestaurantsUrl(
   page: number,
   pageSize: number,
-  query?: string,
+  query?: RestaurantDiscoveryQuery,
 ): string {
   const params = new URLSearchParams({
     page: String(page),
     page_size: String(pageSize),
   });
 
-  const normalizedQuery = query?.trim();
+  const normalizedQuery = query?.query?.trim();
   if (normalizedQuery) {
     params.set('search', normalizedQuery);
     params.set('q', normalizedQuery);
+  }
+
+  const normalizedLocation = query?.location?.trim();
+  if (normalizedLocation) {
+    params.set('location', normalizedLocation);
+  }
+
+  if (typeof query?.latitude === 'number' && typeof query?.longitude === 'number') {
+    params.set('lat', String(query.latitude));
+    params.set('lng', String(query.longitude));
+  }
+
+  if (query?.sort) {
+    params.set('sort', query.sort);
+  }
+
+  if (query?.price) {
+    params.set('price', query.price);
+  }
+
+  if (typeof query?.minRating === 'number') {
+    params.set('min_rating', String(query.minRating));
   }
 
   return `${API_ENDPOINTS.restaurants.list()}?${params.toString()}`;
@@ -276,6 +261,7 @@ export async function fetchRestaurantDetail(
     longitude: toNumber(payload.data.longitude),
     average_rating: toNumber(payload.data.average_rating),
     review_count: toNumber(payload.data.review_count),
+    distance_km: toNumber(payload.data.distance_km),
     price_range: payload.data.price_range,
     category,
     categories,
@@ -417,8 +403,20 @@ export function getRestaurantCoverImage(seed: string): string {
   return coverImages[hash % coverImages.length];
 }
 
-export function getRestaurantDistanceKm(seed: string): number {
-  const hash = seededHash(seed);
+export function getRestaurantDistanceKm(
+  seed: string | Pick<Restaurant, 'slug' | 'distance_km'>,
+): number {
+  const resolvedSeed = typeof seed === 'string' ? seed : seed.slug;
+  const distance =
+    typeof seed === 'object' && seed !== null
+      ? toNumber(seed.distance_km)
+      : undefined;
+
+  if (typeof distance === 'number') {
+    return distance;
+  }
+
+  const hash = seededHash(resolvedSeed);
   return Math.round((((hash % 120) + 5) / 10) * 10) / 10;
 }
 
@@ -568,6 +566,7 @@ function normalizeRestaurant(
     longitude: toNumber(candidate.longitude),
     average_rating: toNumber(candidate.average_rating),
     review_count: toNumber(candidate.review_count),
+    distance_km: toNumber(candidate.distance_km),
     price_range: candidate.price_range,
     category,
     categories,

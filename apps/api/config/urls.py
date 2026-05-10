@@ -11,7 +11,7 @@ from drf_spectacular.views import (
     SpectacularRedocView,
     SpectacularSwaggerView,
 )
-from restaurants.views import CategoryListController
+from restaurants.controllers import CategoryListController
 
 urlpatterns = [
     path("admin/", admin.site.urls),

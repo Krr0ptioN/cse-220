@@ -14,7 +14,6 @@ import {
   useExploreError,
   useExplorePagination,
 } from '../_stores/explore-store';
-import type { Restaurant } from '../_stores/explore-store';
 
 const DEFAULT_PAGE_SIZE = 12;
 
@@ -25,49 +24,28 @@ function toPositiveInt(value: string | null): number | null {
   return parsed;
 }
 
-function applyLocalFilter(items: Restaurant[], query: string): Restaurant[] {
-  const normalizedQuery = query.trim().toLowerCase();
-  if (!normalizedQuery) return items;
-
-  return items.filter((item) => {
-    const haystack = [
-      item.name,
-      item.description,
-      item.category?.name,
-      item.city,
-      item.district,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-
-    return haystack.includes(normalizedQuery);
-  });
-}
-
-function applyClientFilters(
-  items: Restaurant[],
-  price: string | null,
-  rating: number | null,
-): Restaurant[] {
-  let filtered = items;
-
-  if (price) {
-    filtered = filtered.filter((r) => r.price_range === price);
-  }
-
-  if (rating !== null) {
-    filtered = filtered.filter((r) => (r.average_rating ?? 0) >= rating);
-  }
-
-  return filtered;
+function toNumber(value: string | null): number | null {
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export function useRestaurantData(initialQuery: string, initialPage: number) {
   const searchParams = useSearchParams();
 
   const query = (searchParams.get('q') ?? initialQuery).trim();
+  const location = (searchParams.get('location') ?? '').trim();
   const page = toPositiveInt(searchParams.get('page')) ?? initialPage;
+  const latitude =
+    toNumber(searchParams.get('lat')) ?? toNumber(searchParams.get('latitude'));
+  const longitude =
+    toNumber(searchParams.get('lng')) ?? toNumber(searchParams.get('longitude'));
+  const sort = (searchParams.get('sort') ?? '').trim() || null;
+  const price =
+    (searchParams.get('price') ?? searchParams.get('price_range') ?? '').trim() ||
+    null;
+  const minRating =
+    toNumber(searchParams.get('min_rating')) ?? toNumber(searchParams.get('minRating'));
 
   const restaurants = useExploreRestaurants();
   const filters = useExploreFilters();
@@ -80,6 +58,11 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
   }, [query]);
 
   useEffect(() => {
+    useExploreStore.getState().setPriceFilter(price);
+    useExploreStore.getState().setRatingFilter(minRating);
+  }, [price, minRating]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     async function loadRestaurants() {
@@ -88,7 +71,15 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
 
       try {
         const response = await fetch(
-          buildRestaurantsUrl(page, DEFAULT_PAGE_SIZE, query),
+          buildRestaurantsUrl(page, DEFAULT_PAGE_SIZE, {
+            query,
+            location,
+            latitude,
+            longitude,
+            sort,
+            price,
+            minRating,
+          }),
           {
             cache: 'no-store',
             credentials: 'include',
@@ -134,14 +125,7 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
           };
         });
 
-        const locallyFiltered = applyLocalFilter(mergedFavorites, query);
-        const clientFiltered = applyClientFilters(
-          locallyFiltered,
-          filters.price,
-          filters.rating,
-        );
-
-        useExploreStore.getState().setRestaurants(clientFiltered);
+        useExploreStore.getState().setRestaurants(mergedFavorites);
         useExploreStore.getState().setPagination(normalized.pagination);
       } catch (error) {
         if (controller.signal.aborted) return;
@@ -163,7 +147,7 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
 
     void loadRestaurants();
     return () => controller.abort();
-  }, [page, query, filters.price, filters.rating]);
+  }, [page, query, location, latitude, longitude, sort, price, minRating]);
 
   const activeFilterCount = useMemo(
     () => [filters.price, filters.rating].filter(Boolean).length,
@@ -182,6 +166,10 @@ export function useRestaurantData(initialQuery: string, initialPage: number) {
 
   return {
     query,
+    location,
+    latitude,
+    longitude,
+    sort,
     page,
     restaurants,
     pagination,

@@ -32,7 +32,7 @@ export function RestaurantListItem({
 }: RestaurantListItemProps) {
   const imageUrl = getRestaurantImageUrl(restaurant);
   const photoUrls = getRestaurantPhotoUrls(restaurant);
-  const distanceKm = getRestaurantDistanceKm(restaurant.slug);
+  const distanceKm = getRestaurantDistanceKm(restaurant);
   const categoryName =
     restaurant.category?.name ?? restaurant.categories?.[0]?.name ?? 'Restaurant';
 

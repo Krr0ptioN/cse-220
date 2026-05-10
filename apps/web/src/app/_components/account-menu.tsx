@@ -15,8 +15,7 @@ import {
   RiRestaurant2Line,
 } from '@remixicon/react';
 
-import { destinationForRole } from '@/app/(auth)/auth/_lib/auth-flow';
-import { type User } from '@/lib/restaurants';
+import { destinationForRole, type User } from '@flavor-map/ui-module-auth';
 
 function getInitials(value: string): string {
   return (

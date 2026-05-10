@@ -51,6 +51,8 @@ def create_restaurant(
     price_range: str = "2",
     average_rating: str | int | float | None = None,
     review_count: int | None = None,
+    latitude: str | float | None = None,
+    longitude: str | float | None = None,
     categories: list[Category] | tuple[Category, ...] | None = None,
 ):
     """Create a restaurant and optionally attach categories."""
@@ -69,6 +71,10 @@ def create_restaurant(
         "average_rating": average_rating if average_rating is not None else 0,
         "review_count": review_count if review_count is not None else 0,
     }
+    if latitude is not None:
+        restaurant_data["latitude"] = latitude
+    if longitude is not None:
+        restaurant_data["longitude"] = longitude
     if slug is not None:
         restaurant_data["slug"] = slug
 

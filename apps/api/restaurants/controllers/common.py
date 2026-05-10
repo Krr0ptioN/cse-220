@@ -43,4 +43,34 @@ pagination_and_filter_parameters = [
         OpenApiTypes.NUMBER,
         description="Filter restaurants with average rating greater than or equal to this value.",
     ),
+    OpenApiParameter(
+        "location",
+        OpenApiTypes.STR,
+        description="Filter restaurants by location text against city, district, and address.",
+    ),
+    OpenApiParameter(
+        "latitude",
+        OpenApiTypes.NUMBER,
+        description="Latitude used for proximity sorting and distance labels.",
+    ),
+    OpenApiParameter(
+        "lat",
+        OpenApiTypes.NUMBER,
+        description="Alias for latitude used for proximity sorting and distance labels.",
+    ),
+    OpenApiParameter(
+        "longitude",
+        OpenApiTypes.NUMBER,
+        description="Longitude used for proximity sorting and distance labels.",
+    ),
+    OpenApiParameter(
+        "lng",
+        OpenApiTypes.NUMBER,
+        description="Alias for longitude used for proximity sorting and distance labels.",
+    ),
+    OpenApiParameter(
+        "sort",
+        OpenApiTypes.STR,
+        description="Sort restaurants by rating, newest, name, or distance.",
+    ),
 ]

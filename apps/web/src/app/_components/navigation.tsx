@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { startTransition, useEffect, useState, type ComponentType } from 'react';
+import { startTransition, useEffect, type ComponentType } from 'react';
 import {
   Button,
   Spinner,
@@ -13,8 +13,7 @@ import {
   RiStore2Line,
 } from '@remixicon/react';
 
-import { logoutUser, getCurrentUser } from '@/app/(auth)/auth/_lib/auth-api';
-import { type User } from '@/lib/restaurants';
+import { useAuthSession, type User } from '@flavor-map/ui-module-auth';
 import { AccountMenu } from './account-menu';
 
 type NavLink = {
@@ -32,8 +31,8 @@ const navigationLinks: NavLink[] = [
     icon: RiRestaurant2Line,
   },
   {
-    href: '/business/sign-in',
-    label: 'For business',
+    href: '/auth/sign-up?role=owner',
+    label: 'For owners',
     description: 'Manage your listing',
     icon: RiStore2Line,
   },
@@ -42,54 +41,31 @@ const navigationLinks: NavLink[] = [
 export function Navigation() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isSigningOut, setIsSigningOut] = useState(false);
+  const {
+    user,
+    status,
+    isSigningOut,
+    loadCurrentUser,
+    patchUser,
+    signOut,
+  } = useAuthSession((state) => ({
+    user: state.user,
+    status: state.status,
+    isSigningOut: state.isSigningOut,
+    loadCurrentUser: state.loadCurrentUser,
+    patchUser: state.patchUser,
+    signOut: state.signOut,
+  }));
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function loadUser() {
-      setIsLoadingUser(true);
-
-      try {
-        const currentUser = await getCurrentUser();
-
-        if (!cancelled) {
-          setUser(currentUser);
-        }
-      } catch {
-        if (!cancelled) {
-          setUser(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingUser(false);
-        }
-      }
-    }
-
-    void loadUser();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [pathname]);
+    void loadCurrentUser();
+  }, [loadCurrentUser, pathname]);
 
   useEffect(() => {
     function handleProfileUpdated(event: Event) {
       const updatedProfile = (event as CustomEvent<Partial<User>>).detail;
 
-      setUser((currentUser) => {
-        if (!currentUser || (updatedProfile.id && updatedProfile.id !== currentUser.id)) {
-          return currentUser;
-        }
-
-        return {
-          ...currentUser,
-          ...updatedProfile,
-        };
-      });
+      patchUser(updatedProfile);
     }
 
     window.addEventListener('flavormap:profile-updated', handleProfileUpdated);
@@ -97,28 +73,25 @@ export function Navigation() {
     return () => {
       window.removeEventListener('flavormap:profile-updated', handleProfileUpdated);
     };
-  }, []);
+  }, [patchUser]);
 
-  if (pathname.startsWith('/owner/dashboard') || pathname.startsWith('/auth') || pathname.startsWith('/business')) {
+  if (pathname.startsWith('/owner/dashboard') || pathname.startsWith('/auth')) {
     return null;
   }
 
   const displayName =
     user?.display_name?.trim() || user?.username || user?.email.split('@')[0] || null;
-  const roleLabel = user ? (user.role === 'owner' ? 'Business account' : 'Reviewer account') : null;
+  const roleLabel = user ? (user.role === 'owner' ? 'Owner account' : 'Reviewer account') : null;
 
   async function handleSignOut() {
-    setIsSigningOut(true);
-
     try {
-      await logoutUser();
-      setUser(null);
+      await signOut();
       startTransition(() => {
         router.push('/');
         router.refresh();
       });
-    } finally {
-      setIsSigningOut(false);
+    } catch {
+      // Store owns the error state. Keep the menu open and avoid navigating.
     }
   }
 
@@ -158,7 +131,7 @@ export function Navigation() {
             Explore restaurants
           </Link>
 
-          {isLoadingUser ? (
+          {status === 'idle' || status === 'loading' ? (
             <Button variant="ghost" size="sm" className="gap-2 rounded-full" disabled>
               <Spinner className="size-4" />
               Account

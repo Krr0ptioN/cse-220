@@ -1,6 +1,7 @@
 """Restaurant serializers."""
 
 from rest_framework import serializers
+from math import atan2, cos, radians, sin, sqrt
 
 from api.serializers import DynamicFieldsModelSerializer
 from files.services import create_file_service
@@ -115,6 +116,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
     photos = RestaurantPhotoSerializer(many=True, read_only=True)
     primary_photo_url = serializers.SerializerMethodField()
     is_favorite = serializers.SerializerMethodField()
+    distance_km = serializers.SerializerMethodField()
 
     class Meta:
         model = Restaurant
@@ -139,6 +141,7 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
             "price_range",
             "average_rating",
             "review_count",
+            "distance_km",
             "favorite_count",
             "favorite_score",
             "last_favorited_at",
@@ -162,6 +165,57 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
         if user is None or not user.is_authenticated:
             return False
         return obj.favorited_by.filter(user=user).exists()
+
+    def get_distance_km(self, obj) -> float | None:
+        annotated_value = getattr(obj, "distance_km", None)
+        if annotated_value is not None:
+            try:
+                return round(float(annotated_value), 1)
+            except (TypeError, ValueError):
+                return None
+
+        request = self.context.get("request")
+        if request is None:
+            return None
+
+        origin_lat = request.query_params.get("lat") or request.query_params.get("latitude")
+        origin_lng = request.query_params.get("lng") or request.query_params.get("longitude")
+        restaurant_lat = getattr(obj, "latitude", None)
+        restaurant_lng = getattr(obj, "longitude", None)
+        if any(
+            value is None
+            for value in (origin_lat, origin_lng, restaurant_lat, restaurant_lng)
+        ):
+            return None
+
+        try:
+            return round(
+                self._distance_km(
+                    float(origin_lat),
+                    float(origin_lng),
+                    float(restaurant_lat),
+                    float(restaurant_lng),
+                ),
+                1,
+            )
+        except (TypeError, ValueError):
+            return None
+
+    def _distance_km(
+        self,
+        origin_latitude: float,
+        origin_longitude: float,
+        restaurant_latitude: float,
+        restaurant_longitude: float,
+    ) -> float:
+        radius_km = 6371.0
+        delta_lat = radians(restaurant_latitude - origin_latitude)
+        delta_lng = radians(restaurant_longitude - origin_longitude)
+        origin_lat_rad = radians(origin_latitude)
+        restaurant_lat_rad = radians(restaurant_latitude)
+        a = sin(delta_lat / 2) ** 2 + cos(origin_lat_rad) * cos(restaurant_lat_rad) * sin(delta_lng / 2) ** 2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+        return radius_km * c
 
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):

@@ -22,7 +22,7 @@ vi.mock('@remixicon/react', () => ({
   RiRestaurant2Line: () => <svg />,
 }));
 
-vi.mock('@/app/(auth)/auth/_lib/auth-flow', () => ({
+vi.mock('@flavor-map/ui-module-auth', () => ({
   destinationForRole: () => '/profile',
 }));
 

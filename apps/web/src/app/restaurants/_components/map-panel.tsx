@@ -8,6 +8,7 @@ import {
   MarkerTooltip,
 } from '@/components/ui/map';
 import type { Restaurant } from '@/lib/restaurants';
+import { RestaurantHoverPreview } from './restaurant-hover-preview';
 
 interface MapPanelProps {
   restaurants: Restaurant[];
@@ -75,13 +76,8 @@ export function MapPanel({
                   )}
                 </div>
               </MarkerContent>
-              <MarkerTooltip>
-                <div className="space-y-1">
-                  <p className="text-xs font-semibold">{restaurant.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {restaurant.district || restaurant.city || 'Restaurant'}
-                  </p>
-                </div>
+              <MarkerTooltip className="pointer-events-none rounded-none border-0 bg-transparent p-0 shadow-none">
+                <RestaurantHoverPreview restaurant={restaurant} />
               </MarkerTooltip>
             </MapMarker>
           );
