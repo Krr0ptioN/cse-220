@@ -1,9 +1,12 @@
 """Restaurant data access layer."""
-from restaurants.query_builder import RestaurantQueryBuilder
 
+from wireup import injectable
+
+from restaurants.query_builder import RestaurantQueryBuilder
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant, RestaurantPhoto
 from django.db import transaction
 
+@injectable
 class RestaurantRepository:
     """Repository for restaurant persistence and queries."""
 

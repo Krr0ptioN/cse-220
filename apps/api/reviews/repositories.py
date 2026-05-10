@@ -1,11 +1,13 @@
 """Review data access layer."""
 
 from django.db.models import Avg, Count, Prefetch, Q
+from wireup import injectable
 
 from restaurants.models import Restaurant
 from reviews.models import Review, ReviewLike
 
 
+@injectable
 class ReviewRepository:
     """Repository for review persistence and queries."""
 

@@ -7,6 +7,7 @@ from math import atan2, cos, radians, sin, sqrt
 from typing import Iterable
 
 from django.db.models import Q, QuerySet
+from wireup import injectable
 
 from restaurants.models import Restaurant
 
@@ -29,6 +30,7 @@ class GeoDiscoveryRequest:
         return self.sort == "distance" and self.has_coordinates
 
 
+@injectable
 class HaversineDistanceCalculator:
     """Calculate straight-line distance between two geographic points."""
 
@@ -55,6 +57,7 @@ class HaversineDistanceCalculator:
         return round(self.radius_km * c, 1)
 
 
+@injectable
 class GeospatialRestaurantSearchEngine:
     """Apply location filters and optional distance ranking.
 
@@ -63,7 +66,7 @@ class GeospatialRestaurantSearchEngine:
     `distance_km` when coordinates are available.
     """
 
-    def __init__(self, distance_calculator: HaversineDistanceCalculator | None = None):
+    def __init__(self, distance_calculator: HaversineDistanceCalculator | None = None) -> None:
         self.distance_calculator = distance_calculator or HaversineDistanceCalculator()
 
     def search(
