@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { API_ENDPOINTS } from '@/lib/restaurants';
-import { sessionRequest } from './auth-api';
+import { AUTH_ENDPOINTS } from './endpoints';
+import { sessionRequest } from './api';
 
 describe('session API helpers', () => {
   afterEach(() => {
@@ -33,7 +33,7 @@ describe('session API helpers', () => {
       }),
     ).resolves.toEqual({ ok: true });
 
-    expect(fetchMock).toHaveBeenNthCalledWith(1, API_ENDPOINTS.auth.csrf(), {
+    expect(fetchMock).toHaveBeenNthCalledWith(1, AUTH_ENDPOINTS.csrf(), {
       credentials: 'include',
     });
     expect(fetchMock).toHaveBeenNthCalledWith(

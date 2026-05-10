@@ -1,5 +1,5 @@
-import { OwnerDashboard } from './_components/owner-dashboard';
+import { redirect } from 'next/navigation';
 
 export default function OwnerDashboardPage() {
-  return <OwnerDashboard />;
+  redirect('/owner/dashboard/overview');
 }

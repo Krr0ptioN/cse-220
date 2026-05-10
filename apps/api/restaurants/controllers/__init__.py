@@ -1,3 +1,4 @@
+from .category import CategoryListController
 from .favorites import (
     ReviewerFavoriteRestaurantListController,
     ReviewerFavoriteRestaurantController,
@@ -19,6 +20,7 @@ from .menu_items import (
 from .homepage import RestaurantHomepageController
 
 __all__ = [
+    "CategoryListController",
     "RestaurantHomepageController",
     "ReviewerFavoriteRestaurantController",
     "ReviewerFavoriteRestaurantListController",

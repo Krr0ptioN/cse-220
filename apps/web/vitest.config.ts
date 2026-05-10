@@ -19,6 +19,10 @@ export default defineConfig({
         rootDir,
         '../../libs/ui/modules/restaurants/src/index.ts',
       ),
+      '@flavor-map/ui-module-auth': path.resolve(
+        rootDir,
+        '../../libs/ui/modules/auth/src/index.ts',
+      ),
     },
   },
   test: {

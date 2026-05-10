@@ -1311,7 +1311,25 @@ h2 = ["h2 (>=4,<5)"]
 socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 
+[[package]]
+name = "wireup"
+version = "2.11.0"
+description = "Python Dependency Injection Library"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "wireup-2.11.0-py3-none-any.whl", hash = "sha256:d1ccba0907eee3b1ddefc46c9966e5ffc238d057bb7fba9667e1237e6ad3909f"},
+    {file = "wireup-2.11.0.tar.gz", hash = "sha256:053f7dbc663e5343046675f3e736f4ebc7ea7881f704f5325398468bd67dcdc7"},
+]
+
+[package.dependencies]
+typing-extensions = ">=4.7"
+
+[package.extras]
+eval-type = ["eval-type-backport (>=0.2.0) ; python_version < \"3.11\""]
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "3d118e658fbf5d5017bdc1f93b71ca9f9dfba7e0db8329ab216f5406a1ca0b6b"
+content-hash = "d8a71b3424267b898846a97650142bc5180db41840665b90b6fcf276d180f630"

@@ -1,5 +1,6 @@
-import { API_ENDPOINTS, type User } from '@/lib/restaurants';
+import { AUTH_ENDPOINTS } from './endpoints';
 import { normalizeApiError, type RegisterPayload } from './flow';
+import { type User } from './types';
 
 interface ApiEnvelope<T> {
   data?: T;
@@ -43,7 +44,7 @@ export async function sessionRequest<T>(
 }
 
 export async function registerUser(payload: RegisterPayload): Promise<User> {
-  return sessionRequest<User>(API_ENDPOINTS.auth.register(), {
+  return sessionRequest<User>(AUTH_ENDPOINTS.register(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -51,7 +52,7 @@ export async function registerUser(payload: RegisterPayload): Promise<User> {
 }
 
 export async function loginUser(payload: LoginPayload): Promise<User> {
-  return sessionRequest<User>(API_ENDPOINTS.auth.login(), {
+  return sessionRequest<User>(AUTH_ENDPOINTS.login(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -62,15 +63,15 @@ export async function loginUser(payload: LoginPayload): Promise<User> {
 }
 
 export async function getCurrentUser(): Promise<User> {
-  return sessionRequest<User>(API_ENDPOINTS.auth.me());
+  return sessionRequest<User>(AUTH_ENDPOINTS.me());
 }
 
 export async function logoutUser(): Promise<void> {
-  await sessionRequest<void>(API_ENDPOINTS.auth.logout(), { method: 'POST' });
+  await sessionRequest<void>(AUTH_ENDPOINTS.logout(), { method: 'POST' });
 }
 
 async function fetchCsrfToken(): Promise<string> {
-  const response = await fetch(API_ENDPOINTS.auth.csrf(), {
+  const response = await fetch(AUTH_ENDPOINTS.csrf(), {
     credentials: 'include',
   });
   const payload = (await response.json().catch(() => null)) as

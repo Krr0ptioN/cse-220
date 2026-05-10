@@ -6,7 +6,7 @@ export function getApiBaseUrl(): string {
     return normalizeClientApiBaseUrl(configuredBaseUrl.replace(/\/$/, ''));
   }
 
-  return normalizeClientApiBaseUrl(env.apiBaseUrl);
+  return normalizeClientApiBaseUrl('http://localhost:8020');
 }
 
 function normalizeClientApiBaseUrl(baseUrl: string): string {

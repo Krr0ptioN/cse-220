@@ -1,5 +1,6 @@
-import { API_ENDPOINTS, getApiBaseUrl } from './restaurants';
-import { sessionRequest } from '@/app/(auth)/auth/_lib/auth-api';
+import { getApiBaseUrl } from 'ui-common';
+import { API_ENDPOINTS } from './restaurants';
+import { sessionRequest } from '@flavor-map/ui-module-auth';
 
 export type Review = {
   id: string;

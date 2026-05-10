@@ -37,6 +37,7 @@ readme = 'README.md'
   djangorestframework = "^3.17.1"
   drf-spectacular = "^0.29.0"
   minio = "^7.2.12"
+  wireup = "^2.11.0"
 
   [tool.poetry.group.dev.dependencies]
   autopep8 = "2.3.1"

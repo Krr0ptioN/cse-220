@@ -10,7 +10,7 @@ import {
 } from "./_components";
 
 import { API_ENDPOINTS } from "@/lib/restaurants";
-import { sessionRequest } from "@/app/(auth)/auth/_lib/auth-api";
+import { sessionRequest } from "@flavor-map/ui-module-auth";
 import { getFavoriteRestaurants } from "@flavor-map/ui-module-restaurants";
 import {
   getUserProfile,

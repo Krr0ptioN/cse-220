@@ -1,4 +1,4 @@
-export type AuthVariant = 'reviewer' | 'business';
+export type AuthVariant = 'reviewer' | 'owner';
 export type AuthRole = 'user' | 'reviewer' | 'owner' | 'admin';
 
 export interface RegisterFormInput {
@@ -26,7 +26,15 @@ export function destinationForRole(role: AuthRole | string | undefined): string 
 }
 
 export function roleForAuthVariant(variant: AuthVariant): 'user' | 'owner' {
-  return variant === 'business' ? 'owner' : 'user';
+  return variant === 'owner' ? 'owner' : 'user';
+}
+
+export function authVariantFromRoleParam(
+  role: string | string[] | undefined,
+): AuthVariant {
+  const value = Array.isArray(role) ? role[0] : role;
+
+  return value === 'owner' ? 'owner' : 'reviewer';
 }
 
 export function getCookieValue(cookieHeader: string, name: string): string | null {
