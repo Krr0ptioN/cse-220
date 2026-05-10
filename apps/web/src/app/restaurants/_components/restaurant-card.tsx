@@ -29,7 +29,7 @@ type RestaurantCardProps = {
 export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   const imageUrl = getRestaurantImageUrl(restaurant);
   const photoUrls = getRestaurantPhotoUrls(restaurant);
-  const distanceKm = getRestaurantDistanceKm(restaurant.slug);
+  const distanceKm = getRestaurantDistanceKm(restaurant);
   const isOpen = getRestaurantIsOpen(restaurant.slug);
   const {
     isLoading,

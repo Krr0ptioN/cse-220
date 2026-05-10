@@ -25,6 +25,7 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
 
   const {
     query,
+    location,
     restaurants,
     pagination,
     errorMessage,
@@ -88,6 +89,73 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
     replaceSearchParams({ q: null, page: '1' });
   }, [replaceSearchParams]);
 
+  const handleLocationSubmit = useCallback(
+    (value: string) => {
+      replaceSearchParams({
+        location: value || null,
+        lat: null,
+        lng: null,
+        sort: null,
+        page: '1',
+      });
+    },
+    [replaceSearchParams],
+  );
+
+  const handleLocationClear = useCallback(() => {
+    replaceSearchParams({
+      location: null,
+      lat: null,
+      lng: null,
+      sort: null,
+      page: '1',
+    });
+  }, [replaceSearchParams]);
+
+  const handleUseCurrentLocation = useCallback(
+    ({ latitude, longitude }: { latitude: number; longitude: number }) => {
+      replaceSearchParams({
+        location: null,
+        lat: String(latitude),
+        lng: String(longitude),
+        sort: 'distance',
+        page: '1',
+      });
+    },
+    [replaceSearchParams],
+  );
+
+  const handlePriceChange = useCallback(
+    (price: string | null) => {
+      setPriceFilter(price);
+      replaceSearchParams({
+        price,
+        page: '1',
+      });
+    },
+    [replaceSearchParams, setPriceFilter],
+  );
+
+  const handleRatingChange = useCallback(
+    (rating: number | null) => {
+      setRatingFilter(rating);
+      replaceSearchParams({
+        min_rating: rating === null ? null : String(rating),
+        page: '1',
+      });
+    },
+    [replaceSearchParams, setRatingFilter],
+  );
+
+  const handleClearAllFilters = useCallback(() => {
+    clearAllFilters();
+    replaceSearchParams({
+      price: null,
+      min_rating: null,
+      page: '1',
+    });
+  }, [clearAllFilters, replaceSearchParams]);
+
   const handlePageChange = useCallback(
     (nextPage: number) => {
       replaceSearchParams({ page: String(nextPage) });
@@ -122,10 +190,14 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
           <div className="pointer-events-none absolute inset-x-3 top-3 z-20 flex flex-col gap-2 sm:inset-x-4 sm:top-4 lg:inset-x-5 lg:top-5">
             <div className="pointer-events-auto max-w-2xl">
               <SearchBar
-                value={searchParams.get('q') ?? ''}
+                value={query}
+                locationValue={location}
                 onChange={setInputValue}
                 onSubmit={handleSearchSubmit}
+                onLocationSubmit={handleLocationSubmit}
+                onUseCurrentLocation={handleUseCurrentLocation}
                 onClear={handleSearchClear}
+                onLocationClear={handleLocationClear}
                 activeFilterCount={activeFilterCount}
                 showFilters={showFilters}
                 onToggleFilters={toggleFilters}
@@ -137,9 +209,9 @@ export function ExploreView({ initialQuery, initialPage }: ExploreViewProps) {
                 <FilterBar
                   filters={filters}
                   activeCount={activeFilterCount}
-                  onPriceChange={setPriceFilter}
-                  onRatingChange={setRatingFilter}
-                  onClearAll={clearAllFilters}
+                  onPriceChange={handlePriceChange}
+                  onRatingChange={handleRatingChange}
+                  onClearAll={handleClearAllFilters}
                 />
               </div>
             )}

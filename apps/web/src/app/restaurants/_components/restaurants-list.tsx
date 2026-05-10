@@ -66,7 +66,7 @@ export function RestaurantsList({
 
       try {
         const response = await fetch(
-          buildRestaurantsUrl(page, DEFAULT_PAGE_SIZE, query),
+          buildRestaurantsUrl(page, DEFAULT_PAGE_SIZE, { query }),
           {
             cache: 'no-store',
             signal: controller.signal,

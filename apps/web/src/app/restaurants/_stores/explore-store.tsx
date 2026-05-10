@@ -20,6 +20,7 @@ export type Restaurant = {
   phone?: string;
   average_rating?: number;
   review_count?: number;
+  distance_km?: number;
   price_range?: string;
   category?: RestaurantCategory;
   primary_photo_url?: string;
