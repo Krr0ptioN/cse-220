@@ -93,3 +93,8 @@ storybook-static
 .claude/worktrees
 .claude/settings.local.json
 /apps/web/tsconfig.tsbuildinfo
+/.agents/skills
+/.codex
+/.gemini
+/.opencode
+/opencode.json
