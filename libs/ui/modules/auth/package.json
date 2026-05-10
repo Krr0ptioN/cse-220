@@ -15,6 +15,8 @@
     }
   },
   "dependencies": {
-    "@tanstack/react-form": "^1.30.0"
+    "@okyrychenko-dev/react-zustand-toolkit": "^0.4.0",
+    "@tanstack/react-form": "^1.30.0",
+    "zustand": "^5.0.12"
   }
 }
