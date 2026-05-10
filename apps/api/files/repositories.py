@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from uuid import UUID
+
+from wireup import injectable
+
 from files.models import StoredFile
 
 
+@injectable
 class FileRepository:
     """Handles database operations for stored files."""
 

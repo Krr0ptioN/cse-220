@@ -4,8 +4,13 @@ from rest_framework import serializers
 from math import atan2, cos, radians, sin, sqrt
 
 from api.serializers import DynamicFieldsModelSerializer
-from files.services import create_file_service
+from files.services import FileService
 from restaurants.models import Category, MenuItem, OpeningHour, Restaurant, RestaurantPhoto
+
+
+def _file_service(serializer: serializers.BaseSerializer) -> FileService | None:
+    return serializer.context.get("file_service")
+
 
 class CategorySerializer(serializers.ModelSerializer):
     """Nested category serializer."""
@@ -19,7 +24,8 @@ class CategorySerializer(serializers.ModelSerializer):
     def get_icon_url(self, obj) -> str | None:
         if not obj.icon_id:
             return None
-        return create_file_service().get_obfuscated_url(obj.icon_id)
+        file_service = _file_service(self)
+        return file_service.get_obfuscated_url(obj.icon_id) if file_service else None
 
 
 class OpeningHourSerializer(serializers.ModelSerializer):
@@ -58,7 +64,8 @@ class MenuItemSerializer(serializers.ModelSerializer):
     def get_image_url(self, obj) -> str | None:
         if not obj.image_id:
             return None
-        return create_file_service().get_obfuscated_url(obj.image_id)
+        file_service = _file_service(self)
+        return file_service.get_obfuscated_url(obj.image_id) if file_service else None
 
 
 class RestaurantPhotoSerializer(serializers.ModelSerializer):
@@ -72,7 +79,8 @@ class RestaurantPhotoSerializer(serializers.ModelSerializer):
         fields = ["id", "url", "caption", "sort_order", "is_primary", "created_at"]
 
     def get_url(self, obj) -> str:
-        return create_file_service().get_obfuscated_url(obj.file_id)
+        file_service = _file_service(self)
+        return file_service.get_obfuscated_url(obj.file_id) if file_service else ""
 
     def get_is_primary(self, obj) -> bool:
         return obj.restaurant.primary_photo_id == obj.file_id
@@ -153,7 +161,8 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
     def get_primary_photo_url(self, obj) -> str | None:
         if not obj.primary_photo_id:
             return None
-        return create_file_service().get_obfuscated_url(obj.primary_photo_id)
+        file_service = _file_service(self)
+        return file_service.get_obfuscated_url(obj.primary_photo_id) if file_service else None
 
     def get_is_favorite(self, obj) -> bool:
         annotated_value = getattr(obj, "is_favorite_for_user", None)
@@ -216,7 +225,6 @@ class RestaurantSerializer(DynamicFieldsModelSerializer):
         a = sin(delta_lat / 2) ** 2 + cos(origin_lat_rad) * cos(restaurant_lat_rad) * sin(delta_lng / 2) ** 2
         c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return radius_km * c
-
 
 class RestaurantWriteSerializer(serializers.ModelSerializer):
     """Restaurant create serializer."""

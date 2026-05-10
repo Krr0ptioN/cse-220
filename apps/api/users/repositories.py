@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from wireup import injectable
 
+
+@injectable
 class UserRepository:
     """Repository for user-related read operations."""
 

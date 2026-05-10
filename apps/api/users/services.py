@@ -1,17 +1,22 @@
 """User application services."""
 
-from files.services import create_file_service
+from wireup import injectable
+
+from files.services import FileService
 from users.repositories import UserRepository
 
 
+@injectable
 class UserService:
     """Coordinates user endpoint behavior."""
 
-    repository_class = UserRepository
-
-    def __init__(self, repository: UserRepository | None = None) -> None:
-        self.repository = repository or self.repository_class()
-        self.file_service = create_file_service()
+    def __init__(
+        self,
+        repository: UserRepository | None = None,
+        file_service: FileService | None = None,
+    ) -> None:
+        self.repository = repository or UserRepository()
+        self.file_service = file_service or FileService()
 
     def me(self, user) -> dict[str, str]:
         return self.repository.profile_data(user)

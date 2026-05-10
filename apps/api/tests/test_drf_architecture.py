@@ -1,16 +1,9 @@
 """Architecture tests for the DRF controller/service/repository layers."""
 
-from api.services import HealthService
 from api.urls import urlpatterns as api_urlpatterns
 from django.conf import settings
-from restaurants.repositories import RestaurantRepository
-from restaurants.services import RestaurantService
 from restaurants.urls import urlpatterns as restaurant_urlpatterns
-from reviews.repositories import ReviewRepository
-from reviews.services import ReviewService
 from reviews.urls import urlpatterns as review_urlpatterns
-from users.repositories import UserRepository
-from users.services import UserService
 from users.urls import urlpatterns as user_urlpatterns
 
 
@@ -35,25 +28,28 @@ def test_urls_are_backed_by_drf_controller_classes():
     assert _view_class(review_urlpatterns, "<uuid:review_id>/dislike/").__name__ == "ReviewDislikeController"
     assert _view_class(review_urlpatterns, "<uuid:review_id>/replies/").__name__ == "ReviewRepliesController"
 
-def test_services_depend_on_repositories():
-    assert UserService.repository_class is UserRepository
-    assert RestaurantService.repository_class is RestaurantRepository
-    assert ReviewService.repository_class is ReviewRepository
 
+def test_wireup_is_configured_for_api_modules():
+    assert settings.WIREUP.auto_inject_views is False
+    assert settings.WIREUP.injectables == [
+        "api.services",
+        "api.policies",
+        "users.repositories",
+        "users.services",
+        "restaurants.repositories",
+        "restaurants.search.geospatial",
+        "restaurants.filter_parser",
+        "restaurants.discovery_service",
+        "restaurants.ownership_service",
+        "restaurants.management_service",
+        "restaurants.favorites_service",
+        "restaurants.services",
+        "reviews.repositories",
+        "reviews.services",
+        "files.repositories",
+        "files.services",
+    ]
 
-def test_controllers_depend_on_services():
-    assert _view_class(api_urlpatterns, "").service_class is HealthService
-    assert _view_class(user_urlpatterns, "me/").service_class is UserService
-    assert _view_class(restaurant_urlpatterns, "").service_class is RestaurantService
-    assert _view_class(restaurant_urlpatterns, "mine/dashboard/").service_class is RestaurantService
-    assert _view_class(restaurant_urlpatterns, "<slug:slug>/").service_class is RestaurantService
-    assert _view_class(restaurant_urlpatterns, "<slug:restaurant_slug>/menu-items/").service_class is RestaurantService
-    assert _view_class(restaurant_urlpatterns, "<slug:restaurant_slug>/menu-items/<uuid:menu_item_id>/").service_class is RestaurantService
-    assert _view_class(review_urlpatterns, "restaurants/<slug:restaurant_slug>/").service_class is ReviewService
-    assert _view_class(review_urlpatterns, "<uuid:review_id>/").service_class is ReviewService
-    assert _view_class(review_urlpatterns, "<uuid:review_id>/like/").service_class is ReviewService
-    assert _view_class(review_urlpatterns, "<uuid:review_id>/dislike/").service_class is ReviewService
-    assert _view_class(review_urlpatterns, "<uuid:review_id>/replies/").service_class is ReviewService
 
 def test_drf_uses_session_authentication_only():
     assert settings.REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"] == [

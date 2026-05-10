@@ -6,6 +6,7 @@ Generated for CSE-220 Web Programming project.
 
 from pathlib import Path
 from decouple import config
+from wireup.integration.django import WireupSettings
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,6 +38,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "drf_spectacular",
+    "wireup.integration.django",
     # Local apps
     "api",
     "users",
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "wireup.integration.django.wireup_middleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -167,6 +170,28 @@ CSRF_TRUSTED_ORIGINS = config(
         "http://192.168.1.118:3050,http://192.168.1.118:8020"
     ),
     cast=lambda v: [s.strip() for s in v.split(",")],
+)
+
+WIREUP = WireupSettings(
+    injectables=[
+        "api.services",
+        "api.policies",
+        "users.repositories",
+        "users.services",
+        "restaurants.repositories",
+        "restaurants.search.geospatial",
+        "restaurants.filter_parser",
+        "restaurants.discovery_service",
+        "restaurants.ownership_service",
+        "restaurants.management_service",
+        "restaurants.favorites_service",
+        "restaurants.services",
+        "reviews.repositories",
+        "reviews.services",
+        "files.repositories",
+        "files.services",
+    ],
+    auto_inject_views=False,
 )
 
 REST_FRAMEWORK = {

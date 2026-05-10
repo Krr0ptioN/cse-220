@@ -5,6 +5,8 @@ from django.middleware.csrf import get_token
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from wireup import Injected
+from wireup.integration.django import inject
 
 from api.exceptions import ApiError
 from api.rest import api_data, require_authenticated_user
@@ -21,23 +23,17 @@ from users.services import UserService
 class UsersController(APIView):
     """Controller for users endpoints."""
 
-    service_class = UserService
-
-    def get_service(self) -> UserService:
-        return self.service_class()
-
-    def get(self, request):
+    @inject
+    def get(self, request, service: Injected[UserService]):
         user = require_authenticated_user(request)
-        return api_data(self.get_service().me(user))
+        return api_data(service.me(user))
 
-    def patch(self, request):
+    @inject
+    def patch(self, request, service: Injected[UserService]):
         user = require_authenticated_user(request)
         serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        updated_user = self.get_service().update_profile(
-            user,
-            serializer.validated_data,
-        )
+        updated_user = service.update_profile(user, serializer.validated_data)
         return api_data(UserPublicSerializer(updated_user).data)
 
 
@@ -45,19 +41,13 @@ class UserAvatarController(APIView):
     """Upload and attach the current user's profile avatar."""
 
     parser_classes = [MultiPartParser, FormParser]
-    service_class = UserService
 
-    def get_service(self) -> UserService:
-        return self.service_class()
-
-    def post(self, request):
+    @inject
+    def post(self, request, service: Injected[UserService]):
         user = require_authenticated_user(request)
         serializer = UserAvatarUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        updated_user = self.get_service().update_avatar(
-            user,
-            serializer.validated_data["avatar"],
-        )
+        updated_user = service.update_avatar(user, serializer.validated_data["avatar"])
         return api_data(UserPublicSerializer(updated_user).data)
 
 

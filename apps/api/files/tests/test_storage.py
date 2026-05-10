@@ -12,7 +12,7 @@ from django.core.files.storage import FileSystemStorage
 from django.test import override_settings
 from PIL import Image
 
-from files.services import FileService, create_file_service
+from files.services import FileService
 from files.storage import InvalidStoragePathError, LocalFileStorage, MinioStorage, UnsupportedFileTypeError
 
 
@@ -272,7 +272,7 @@ def test_file_service_can_be_created_from_settings(tmp_path):
         FILE_STORAGE_LOCAL_ROOT=tmp_path,
         FILE_STORAGE_LOCAL_URL="/uploads/",
     ):
-        service = create_file_service()
+        service = FileService()
 
     file_id, stored = service.save(
         _image_file(),

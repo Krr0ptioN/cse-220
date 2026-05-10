@@ -10,6 +10,7 @@ from django.conf import settings
 from django.core.files.base import ContentFile, File
 from django.core.files.storage import FileSystemStorage
 from PIL import Image
+from wireup import injectable
 
 from files.repositories import FileRepository
 from files.storage import (
@@ -23,17 +24,20 @@ from files.storage import (
 )
 
 
+@injectable
 class FileService:
     def __init__(
         self, 
         *, 
-        storage: FileStorage, 
+        storage: FileStorage | None = None, 
         repository: FileRepository | None = None,
-        thumbnail_sizes: tuple[int, ...] = (64, 128, 256)
+        thumbnail_sizes: tuple[int, ...] | None = None,
     ) -> None:
-        self.storage = storage
+        self.storage = storage or self._build_storage()
         self.repository = repository or FileRepository()
-        self.thumbnail_sizes = thumbnail_sizes
+        self.thumbnail_sizes = thumbnail_sizes or tuple(
+            getattr(settings, "FILE_STORAGE_THUMBNAIL_SIZES", (64, 128, 256))
+        )
 
     def save(
         self,
@@ -117,6 +121,43 @@ class FileService:
     def create_presigned_upload_url(self, **kwargs):
         return self.storage.create_presigned_upload_url(**kwargs)
 
+    def _build_storage(self) -> FileStorage:
+        backend = getattr(settings, "FILE_STORAGE_BACKEND", "local").lower()
+        if backend == "local":
+            return LocalFileStorage(
+                storage=FileSystemStorage(
+                    location=getattr(settings, "FILE_STORAGE_LOCAL_ROOT", settings.MEDIA_ROOT),
+                    base_url=getattr(settings, "FILE_STORAGE_LOCAL_URL", settings.MEDIA_URL),
+                ),
+                max_size=getattr(settings, "FILE_STORAGE_MAX_SIZE", DEFAULT_MAX_FILE_SIZE),
+                max_pixels=getattr(
+                    settings,
+                    "FILE_STORAGE_MAX_IMAGE_PIXELS",
+                    DEFAULT_MAX_IMAGE_PIXELS,
+                ),
+            )
+
+        if backend == "minio":
+            from minio import Minio
+
+            return MinioStorage(
+                client=Minio(
+                    getattr(settings, "MINIO_ENDPOINT"),
+                    access_key=getattr(settings, "MINIO_ACCESS_KEY"),
+                    secret_key=getattr(settings, "MINIO_SECRET_KEY"),
+                    secure=getattr(settings, "MINIO_SECURE", False),
+                ),
+                bucket_name=getattr(settings, "MINIO_BUCKET_NAME"),
+                max_size=getattr(settings, "FILE_STORAGE_MAX_SIZE", DEFAULT_MAX_FILE_SIZE),
+                max_pixels=getattr(
+                    settings,
+                    "FILE_STORAGE_MAX_IMAGE_PIXELS",
+                    DEFAULT_MAX_IMAGE_PIXELS,
+                ),
+            )
+
+        raise ValueError(f"Unknown FILE_STORAGE_BACKEND: {backend}")
+
     def _generate_thumbnails(
         self,
         file: File,
@@ -161,46 +202,3 @@ class FileService:
                     )
                 )
         return thumbnails
-
-
-def create_file_service() -> FileService:
-    backend = getattr(settings, "FILE_STORAGE_BACKEND", "local").lower()
-    thumbnail_sizes = tuple(getattr(settings, "FILE_STORAGE_THUMBNAIL_SIZES", (64, 128, 256)))
-    repository = FileRepository()
-
-    if backend == "local":
-        storage = LocalFileStorage(
-            storage=FileSystemStorage(
-                location=getattr(settings, "FILE_STORAGE_LOCAL_ROOT", settings.MEDIA_ROOT),
-                base_url=getattr(settings, "FILE_STORAGE_LOCAL_URL", settings.MEDIA_URL),
-            ),
-            max_size=getattr(settings, "FILE_STORAGE_MAX_SIZE", DEFAULT_MAX_FILE_SIZE),
-            max_pixels=getattr(
-                settings,
-                "FILE_STORAGE_MAX_IMAGE_PIXELS",
-                DEFAULT_MAX_IMAGE_PIXELS,
-            ),
-        )
-        return FileService(storage=storage, repository=repository, thumbnail_sizes=thumbnail_sizes)
-
-    if backend == "minio":
-        from minio import Minio
-
-        storage = MinioStorage(
-            client=Minio(
-                getattr(settings, "MINIO_ENDPOINT"),
-                access_key=getattr(settings, "MINIO_ACCESS_KEY"),
-                secret_key=getattr(settings, "MINIO_SECRET_KEY"),
-                secure=getattr(settings, "MINIO_SECURE", False),
-            ),
-            bucket_name=getattr(settings, "MINIO_BUCKET_NAME"),
-            max_size=getattr(settings, "FILE_STORAGE_MAX_SIZE", DEFAULT_MAX_FILE_SIZE),
-            max_pixels=getattr(
-                settings,
-                "FILE_STORAGE_MAX_IMAGE_PIXELS",
-                DEFAULT_MAX_IMAGE_PIXELS,
-            ),
-        )
-        return FileService(storage=storage, repository=repository, thumbnail_sizes=thumbnail_sizes)
-
-    raise ValueError(f"Unknown FILE_STORAGE_BACKEND: {backend}")
