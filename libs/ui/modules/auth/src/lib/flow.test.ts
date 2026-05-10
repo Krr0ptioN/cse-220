@@ -5,10 +5,23 @@ import {
   destinationForRole,
   getCookieValue,
   normalizeApiError,
+  authVariantFromRoleParam,
   roleForAuthVariant,
   usernameFromEmail,
-} from './auth-flow';
-import { getApiBaseUrl, resolveApiAssetUrl } from '@/lib/restaurants';
+} from './flow';
+import { getApiBaseUrl } from 'ui-common';
+
+function resolveApiAssetUrl(url?: string | null): string {
+  if (!url) {
+    return '';
+  }
+
+  if (/^https?:\/\//i.test(url) || url.startsWith('data:')) {
+    return url;
+  }
+
+  return new URL(url, getApiBaseUrl()).toString();
+}
 
 describe('auth-flow utilities', () => {
   it('routes owners to the restaurant dashboard', () => {
@@ -22,8 +35,16 @@ describe('auth-flow utilities', () => {
   });
 
   it('maps customized auth variants to backend roles', () => {
-    expect(roleForAuthVariant('business')).toBe('owner');
+    expect(roleForAuthVariant('owner')).toBe('owner');
     expect(roleForAuthVariant('reviewer')).toBe('user');
+  });
+
+  it('maps sign-up role search params to auth variants', () => {
+    expect(authVariantFromRoleParam('owner')).toBe('owner');
+    expect(authVariantFromRoleParam('reviewer')).toBe('reviewer');
+    expect(authVariantFromRoleParam(undefined)).toBe('reviewer');
+    expect(authVariantFromRoleParam(['owner', 'reviewer'])).toBe('owner');
+    expect(authVariantFromRoleParam('unknown')).toBe('reviewer');
   });
 
   it('reads a named cookie from a cookie header', () => {
@@ -43,7 +64,7 @@ describe('auth-flow utilities', () => {
         email: 'OWNER@Example.com ',
         password: 'password-123',
         displayName: '  Ada Bistro  ',
-        variant: 'business',
+        variant: 'owner',
       }),
     ).toEqual({
       email: 'owner@example.com',

@@ -1,5 +1,4 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
-from django.db.models import Exists, OuterRef
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.views import APIView
 from rest_framework.response import Response
