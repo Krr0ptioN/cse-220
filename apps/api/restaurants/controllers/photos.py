@@ -2,36 +2,45 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
+from wireup import Injected
+from wireup.integration.django import inject
 
 from api.rest import (
     api_data,
     require_authenticated_user,
 )
+from api.permissions import CanManageRestaurantMedia, MethodPermissionMixin
 from restaurants.serializers import (
     RestaurantPhotoSerializer,
     RestaurantSerializer,
 )
-from restaurants.services import RestaurantService
+from restaurants.management_service import RestaurantManagementService
 
 
-class RestaurantPhotosController(APIView):
+class RestaurantPhotosController(MethodPermissionMixin, APIView):
     """List or upload restaurant gallery photos."""
 
-    service_class = RestaurantService
+    method_permission_classes = {
+        "POST": [CanManageRestaurantMedia],
+    }
     parser_classes = [MultiPartParser, FormParser]
 
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
-
-    def get(self, request, restaurant_slug):
-        service = self.get_service()
+    @inject
+    def get(self, request, restaurant_slug, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
         photos = service.list_photos(restaurant=restaurant)
-        return api_data(RestaurantPhotoSerializer(photos, many=True).data)
+        return api_data(
+            RestaurantPhotoSerializer(
+                photos,
+                many=True,
+                context={"file_service": service.file_service},
+            ).data
+        )
 
-    def post(self, request, restaurant_slug):
-        service = self.get_service()
+    @inject
+    def post(self, request, restaurant_slug, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
+        self.check_object_permissions(request, restaurant)
         user = require_authenticated_user(request)
         uploaded_files = request.FILES.getlist("photos")
 
@@ -47,41 +56,52 @@ class RestaurantPhotosController(APIView):
             restaurant=restaurant,
             uploaded_files=uploaded_files,
         )
-        return api_data(RestaurantPhotoSerializer(photos, many=True).data, status_code=201)
+        return api_data(
+            RestaurantPhotoSerializer(
+                photos,
+                many=True,
+                context={"file_service": service.file_service},
+            ).data,
+            status_code=201,
+        )
 
 
-class RestaurantPhotoDetailController(APIView):
+class RestaurantPhotoDetailController(MethodPermissionMixin, APIView):
     """Delete a restaurant gallery photo."""
 
-    service_class = RestaurantService
+    method_permission_classes = {
+        "DELETE": [CanManageRestaurantMedia],
+    }
 
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
-
-    def delete(self, request, restaurant_slug, photo_id):
-        service = self.get_service()
+    @inject
+    def delete(self, request, restaurant_slug, photo_id, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
+        self.check_object_permissions(request, restaurant)
         user = require_authenticated_user(request)
         service.delete_photo(user=user, restaurant=restaurant, photo_id=photo_id)
         return Response(status=204)
 
 
-class RestaurantPhotoPrimaryController(APIView):
+class RestaurantPhotoPrimaryController(MethodPermissionMixin, APIView):
     """Set a restaurant gallery photo as primary."""
 
-    service_class = RestaurantService
+    method_permission_classes = {
+        "POST": [CanManageRestaurantMedia],
+    }
 
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
-
-    def post(self, request, restaurant_slug, photo_id):
-        service = self.get_service()
+    @inject
+    def post(self, request, restaurant_slug, photo_id, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
+        self.check_object_permissions(request, restaurant)
         user = require_authenticated_user(request)
         updated_restaurant = service.set_primary_photo(
             user=user,
             restaurant=restaurant,
             photo_id=photo_id,
         )
-        return api_data(RestaurantSerializer(updated_restaurant, context={"request": request}).data)
-
+        return api_data(
+            RestaurantSerializer(
+                updated_restaurant,
+                context={"request": request, "file_service": service.file_service},
+            ).data
+        )

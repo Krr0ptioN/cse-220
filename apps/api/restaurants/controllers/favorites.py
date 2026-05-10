@@ -1,5 +1,7 @@
 from rest_framework.views import APIView
-from restaurants.services import RestaurantService
+from wireup import Injected
+from wireup.integration.django import inject
+from api.permissions import CanUseFavorites, MethodPermissionMixin
 from .common import pagination_and_filter_parameters
 from api.rest import (
     paginate_queryset,
@@ -11,12 +13,11 @@ from api.rest import (
 from restaurants.serializers import RestaurantSerializer
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
+from restaurants.discovery_service import RestaurantDiscoveryService
+from restaurants.favorites_service import RestaurantFavoritesService
 
-class ReviewerFavoriteRestaurantListController(APIView):
-    service_class = RestaurantService
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
+class ReviewerFavoriteRestaurantListController(MethodPermissionMixin, APIView):
+    permission_classes = [CanUseFavorites]
 
     @extend_schema(
         summary="User's favorite restaurants list",
@@ -28,7 +29,8 @@ class ReviewerFavoriteRestaurantListController(APIView):
         responses={200: RestaurantSerializer(many=True)},
         tags=["Restaurants", "Favorites"],
     )
-    def get(self, request):
+    @inject
+    def get(self, request, service: Injected[RestaurantDiscoveryService]):
         user = require_authenticated_user(request)
         filters = {
             "category": request.query_params.get("category"),
@@ -44,7 +46,7 @@ class ReviewerFavoriteRestaurantListController(APIView):
 
         sort = request.query_params.get("sort")
 
-        queryset = self.get_service().list_favorite_restaurants(
+        queryset = service.list_favorite_restaurants(
             user=user,
             filters=filters,
             sort=sort,
@@ -80,7 +82,7 @@ class ReviewerFavoriteRestaurantListController(APIView):
             many=True,
             include=include_fields,
             omit=omit_fields,
-            context={"request": request},
+            context={"request": request, "file_service": service.file_service},
         )
 
         return api_paginated(
@@ -105,11 +107,8 @@ class UnfavoriteRestaurantResponseSerializer(serializers.Serializer):
     last_favorited_at = serializers.DateTimeField(allow_null=True)
     restaurant = RestaurantSerializer()
 
-class ReviewerFavoriteRestaurantController(APIView):
-    service_class = RestaurantService
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
+class ReviewerFavoriteRestaurantController(MethodPermissionMixin, APIView):
+    permission_classes = [CanUseFavorites]
 
     @extend_schema(
         summary="User favorite restaurant",
@@ -122,14 +121,18 @@ class ReviewerFavoriteRestaurantController(APIView):
         },
         tags=["Restaurants", "Favorites"],
     )
-    def post(self, request, restaurant_slug, pk=None):
+    @inject
+    def post(self, request, restaurant_slug, pk=None, *, service: Injected[RestaurantFavoritesService]):
         user = require_authenticated_user(request)
-        restaurant, created = self.get_service().favorite_restaurant(
+        restaurant, created = service.favorite_restaurant(
             user=user,
             restaurant_slug=restaurant_slug,
         )
 
-        serializer = RestaurantSerializer(restaurant, context={"request": request})
+        serializer = RestaurantSerializer(
+            restaurant,
+            context={"request": request, "file_service": service.file_service},
+        )
         restaurant_data = serializer.data
 
         return api_data(
@@ -154,13 +157,17 @@ class ReviewerFavoriteRestaurantController(APIView):
         responses={200: UnfavoriteRestaurantResponseSerializer},
         tags=["Restaurants", "Favorites"],
     )
-    def delete(self, request, restaurant_slug, pk=None):
+    @inject
+    def delete(self, request, restaurant_slug, pk=None, *, service: Injected[RestaurantFavoritesService]):
         user = require_authenticated_user(request)
-        restaurant, was_deleted = self.get_service().unfavorite_restaurant(
+        restaurant, was_deleted = service.unfavorite_restaurant(
             user=user,
             restaurant_slug=restaurant_slug,
         )
-        serializer = RestaurantSerializer(restaurant, context={"request": request})
+        serializer = RestaurantSerializer(
+            restaurant,
+            context={"request": request, "file_service": service.file_service},
+        )
         restaurant_data = serializer.data
 
         return api_data(

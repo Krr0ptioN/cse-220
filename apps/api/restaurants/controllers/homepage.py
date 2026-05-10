@@ -1,4 +1,6 @@
 from rest_framework.views import APIView
+from wireup import Injected
+from wireup.integration.django import inject
 
 from api.rest import (
     api_data,
@@ -6,29 +8,25 @@ from api.rest import (
 from restaurants.serializers import (
     RestaurantSerializer,
 )
-from restaurants.services import RestaurantService
+from restaurants.discovery_service import RestaurantDiscoveryService
 
 class RestaurantHomepageController(APIView):
     """Return homepage discovery sections."""
 
-    service_class = RestaurantService
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
-
-    def get(self, request):
-        sections = self.get_service().get_homepage_sections(limit=5)
+    @inject
+    def get(self, request, service: Injected[RestaurantDiscoveryService]):
+        sections = service.get_homepage_sections(limit=5)
         return api_data(
             {
                 "top_rated": RestaurantSerializer(
                     sections["top_rated"],
                     many=True,
-                    context={"request": request},
+                    context={"request": request, "file_service": service.file_service},
                 ).data,
                 "newest": RestaurantSerializer(
                     sections["newest"],
                     many=True,
-                    context={"request": request},
+                    context={"request": request, "file_service": service.file_service},
                 ).data,
             }
         )

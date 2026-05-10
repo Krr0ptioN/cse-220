@@ -2,51 +2,62 @@
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from wireup import Injected
+from wireup.integration.django import inject
 
 from api.rest import api_data, api_paginated, paginate_queryset, require_authenticated_user
+from api.permissions import (
+    CanCreateReview,
+    CanDeleteReview,
+    CanReactToReview,
+    CanUpdateReview,
+    MethodPermissionMixin,
+)
 from reviews.serializers import ReviewCreateSerializer, ReviewSerializer, ReviewUpdateSerializer
 from reviews.services import ReviewService
 
 
-class ReviewController(APIView):
+class ReviewController(MethodPermissionMixin, APIView):
     """Return, update, or delete a single review by ID."""
 
-    service_class = ReviewService
+    method_permission_classes = {
+        "PATCH": [CanUpdateReview],
+        "DELETE": [CanDeleteReview],
+    }
 
-    def get_service(self) -> ReviewService:
-        return self.service_class()
-
-    def get(self, request, review_id):
-        review = self.get_service().get_review(review_id)
+    @inject
+    def get(self, request, review_id, service: Injected[ReviewService]):
+        review = service.get_review(review_id)
         return api_data(ReviewSerializer(review).data)
 
-    def patch(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def patch(self, request, review_id, service: Injected[ReviewService]):
         review = service.get_review(review_id)
+        self.check_object_permissions(request, review)
         user = require_authenticated_user(request)
         serializer = ReviewUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         review = service.update_review(user=user, review=review, data=serializer.validated_data)
         return api_data(ReviewSerializer(review).data)
 
-    def delete(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def delete(self, request, review_id, service: Injected[ReviewService]):
         review = service.get_review(review_id)
+        self.check_object_permissions(request, review)
         user = require_authenticated_user(request)
         service.delete_review(user=user, review=review)
         return Response(status=204)
 
 
-class RestaurantReviewsController(APIView):
+class RestaurantReviewsController(MethodPermissionMixin, APIView):
     """List or create reviews for a restaurant."""
 
-    service_class = ReviewService
+    method_permission_classes = {
+        "POST": [CanCreateReview],
+    }
 
-    def get_service(self) -> ReviewService:
-        return self.service_class()
-
-    def get(self, request, restaurant_slug):
-        service = self.get_service()
+    @inject
+    def get(self, request, restaurant_slug, service: Injected[ReviewService]):
         restaurant = service.get_restaurant(restaurant_slug)
         sort = request.query_params.get("sort", "recent")
         queryset = service.list_restaurant_reviews(restaurant, sort=sort)
@@ -65,8 +76,8 @@ class RestaurantReviewsController(APIView):
 
 
         
-    def post(self, request, restaurant_slug):
-        service = self.get_service()
+    @inject
+    def post(self, request, restaurant_slug, service: Injected[ReviewService]):
         restaurant = service.get_restaurant(restaurant_slug)
         user = require_authenticated_user(request)
         serializer = ReviewCreateSerializer(data=request.data)
@@ -79,60 +90,64 @@ class RestaurantReviewsController(APIView):
         return api_data(ReviewSerializer(review).data, status_code=201)
 
 
-class ReviewLikeController(APIView):
+class ReviewLikeController(MethodPermissionMixin, APIView):
     """Like or unlike a review."""
 
-    service_class = ReviewService
+    method_permission_classes = {
+        "POST": [CanReactToReview],
+        "DELETE": [CanReactToReview],
+    }
 
-    def get_service(self) -> ReviewService:
-        return self.service_class()
-
-    def post(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def post(self, request, review_id, service: Injected[ReviewService]):
         user = require_authenticated_user(request)
         review = service.get_review(review_id)
+        self.check_object_permissions(request, review)
         return api_data(service.set_reaction(user=user, review=review, is_like=True))
 
-    def delete(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def delete(self, request, review_id, service: Injected[ReviewService]):
         user = require_authenticated_user(request)
         review = service.get_review(review_id)
+        self.check_object_permissions(request, review)
         return api_data(service.delete_reaction(user=user, review=review, is_like=True))
 
 
-class ReviewDislikeController(APIView):
+class ReviewDislikeController(MethodPermissionMixin, APIView):
     """Dislike or remove dislike from a review."""
 
-    service_class = ReviewService
+    method_permission_classes = {
+        "POST": [CanReactToReview],
+        "DELETE": [CanReactToReview],
+    }
 
-    def get_service(self) -> ReviewService:
-        return self.service_class()
-
-    def post(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def post(self, request, review_id, service: Injected[ReviewService]):
         user = require_authenticated_user(request)
         review = service.get_review(review_id)
+        self.check_object_permissions(request, review)
         return api_data(service.set_reaction(user=user, review=review, is_like=False))
 
-    def delete(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def delete(self, request, review_id, service: Injected[ReviewService]):
         user = require_authenticated_user(request)
         review = service.get_review(review_id)
+        self.check_object_permissions(request, review)
         return api_data(service.delete_reaction(user=user, review=review, is_like=False))
     
 
-class ReviewRepliesController(APIView):
+class ReviewRepliesController(MethodPermissionMixin, APIView):
     """Create a reply to a review."""
 
-    service_class = ReviewService
+    method_permission_classes = {
+        "POST": [CanCreateReview],
+    }
 
-    def get_service(self) -> ReviewService:
-        return self.service_class()
-
-    def post(self, request, review_id):
-        service = self.get_service()
+    @inject
+    def post(self, request, review_id, service: Injected[ReviewService]):
         review = service.get_review(review_id)
         user = require_authenticated_user(request)
+        self.check_object_permissions(request, review)
         serializer = ReviewCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         reply = service.create_review(

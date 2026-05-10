@@ -1,35 +1,43 @@
 from drf_spectacular.utils import extend_schema
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from wireup import Injected
+from wireup.integration.django import inject
 
 from api.rest import (
     api_data,
     require_authenticated_user,
 )
+from api.permissions import CanManageRestaurantMenu, MethodPermissionMixin
 from restaurants.serializers import (
     MenuItemSerializer,
     MenuItemWriteSerializer,
 )
-from restaurants.services import RestaurantService
+from restaurants.management_service import RestaurantManagementService
 
-class RestaurantMenuItemsController(APIView):
+class RestaurantMenuItemsController(MethodPermissionMixin, APIView):
     """List or create menu items for a restaurant."""
 
-    service_class = RestaurantService
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
+    method_permission_classes = {
+        "POST": [CanManageRestaurantMenu],
+    }
 
     @extend_schema(
         summary="List restaurant menu items",
         responses={200: MenuItemSerializer(many=True)},
         tags=["Menu Items"],
     )
-    def get(self, request, restaurant_slug):
-        service = self.get_service()
+    @inject
+    def get(self, request, restaurant_slug, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
         menu_items = service.list_menu_items(restaurant)
-        return api_data(MenuItemSerializer(menu_items, many=True).data)
+        return api_data(
+            MenuItemSerializer(
+                menu_items,
+                many=True,
+                context={"file_service": service.file_service},
+            ).data
+        )
 
     @extend_schema(
         summary="Create restaurant menu item",
@@ -37,9 +45,10 @@ class RestaurantMenuItemsController(APIView):
         responses={201: MenuItemSerializer},
         tags=["Menu Items"],
     )
-    def post(self, request, restaurant_slug):
-        service = self.get_service()
+    @inject
+    def post(self, request, restaurant_slug, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
+        self.check_object_permissions(request, restaurant)
         user = require_authenticated_user(request)
         serializer = MenuItemWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -48,29 +57,40 @@ class RestaurantMenuItemsController(APIView):
             restaurant=restaurant,
             data=serializer.validated_data,
         )
-        return api_data(MenuItemSerializer(menu_item).data, status_code=201)
+        return api_data(
+            MenuItemSerializer(
+                menu_item,
+                context={"file_service": service.file_service},
+            ).data,
+            status_code=201,
+        )
 
-class RestaurantMenuItemDetailController(APIView):
+class RestaurantMenuItemDetailController(MethodPermissionMixin, APIView):
     """Retrieve, update, or delete one restaurant menu item."""
 
-    service_class = RestaurantService
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
+    method_permission_classes = {
+        "PATCH": [CanManageRestaurantMenu],
+        "DELETE": [CanManageRestaurantMenu],
+    }
 
     @extend_schema(
         summary="Get restaurant menu item",
         responses={200: MenuItemSerializer},
         tags=["Menu Items"],
     )
-    def get(self, request, restaurant_slug, menu_item_id):
-        service = self.get_service()
+    @inject
+    def get(self, request, restaurant_slug, menu_item_id, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
         menu_item = service.get_menu_item(
             restaurant=restaurant,
             menu_item_id=menu_item_id,
         )
-        return api_data(MenuItemSerializer(menu_item).data)
+        return api_data(
+            MenuItemSerializer(
+                menu_item,
+                context={"file_service": service.file_service},
+            ).data
+        )
 
     @extend_schema(
         summary="Update restaurant menu item",
@@ -78,9 +98,10 @@ class RestaurantMenuItemDetailController(APIView):
         responses={200: MenuItemSerializer},
         tags=["Menu Items"],
     )
-    def patch(self, request, restaurant_slug, menu_item_id):
-        service = self.get_service()
+    @inject
+    def patch(self, request, restaurant_slug, menu_item_id, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
+        self.check_object_permissions(request, restaurant)
         menu_item = service.get_menu_item(
             restaurant=restaurant,
             menu_item_id=menu_item_id,
@@ -94,16 +115,22 @@ class RestaurantMenuItemDetailController(APIView):
             menu_item=menu_item,
             data=serializer.validated_data,
         )
-        return api_data(MenuItemSerializer(menu_item).data)
+        return api_data(
+            MenuItemSerializer(
+                menu_item,
+                context={"file_service": service.file_service},
+            ).data
+        )
 
     @extend_schema(
         summary="Delete restaurant menu item",
         responses={204: None},
         tags=["Menu Items"],
     )
-    def delete(self, request, restaurant_slug, menu_item_id):
-        service = self.get_service()
+    @inject
+    def delete(self, request, restaurant_slug, menu_item_id, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(restaurant_slug)
+        self.check_object_permissions(request, restaurant)
         menu_item = service.get_menu_item(
             restaurant=restaurant,
             menu_item_id=menu_item_id,

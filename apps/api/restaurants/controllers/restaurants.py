@@ -1,10 +1,19 @@
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from wireup import Injected
+from wireup.integration.django import inject
+
 from api.rest import (
     api_data,
     require_authenticated_user,
+)
+from api.permissions import (
+    CanCreateRestaurant,
+    CanDeleteRestaurant,
+    CanUpdateRestaurant,
+    MethodPermissionMixin,
 )
 from .common import pagination_and_filter_parameters
 from restaurants.serializers import (
@@ -12,7 +21,8 @@ from restaurants.serializers import (
     RestaurantUpdateSerializer,
     RestaurantWriteSerializer,
 )
-from restaurants.services import RestaurantService
+from restaurants.management_service import RestaurantManagementService
+from restaurants.discovery_service import RestaurantDiscoveryService
 from api.rest import (
     api_paginated,
     paginate_queryset,
@@ -20,14 +30,13 @@ from api.rest import (
 )
 from restaurants.models import Favorite
 
-class RestaurantsController(APIView):
+class RestaurantsController(MethodPermissionMixin, APIView):
     """List restaurants or create a new restaurant."""
 
-    service_class = RestaurantService
+    method_permission_classes = {
+        "POST": [CanCreateRestaurant],
+    }
     parser_classes = [JSONParser, FormParser, MultiPartParser]
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
 
     @extend_schema(
         summary="List restaurants",
@@ -51,7 +60,8 @@ class RestaurantsController(APIView):
         responses={200: RestaurantSerializer(many=True)},
         tags=["Restaurants"],
     )
-    def get(self, request):
+    @inject
+    def get(self, request, service: Injected[RestaurantDiscoveryService]):
         filters = {
             "category": request.query_params.get("category"),
             "city": request.query_params.get("city"),
@@ -65,7 +75,7 @@ class RestaurantsController(APIView):
         }
 
         sort = request.query_params.get("sort")
-        queryset = self.get_service().list_restaurants(filters, sort=sort)
+        queryset = service.list_restaurants(filters, sort=sort)
 
         page_obj, pagination = paginate_queryset(queryset, request)
         page_items = list(page_obj.object_list)
@@ -93,7 +103,7 @@ class RestaurantsController(APIView):
             many=True,
             include=include_fields,
             omit=omit_fields,
-            context={"request": request},
+            context={"request": request, "file_service": service.file_service},
         )
         return api_paginated(serializer.data, pagination)
 
@@ -104,29 +114,30 @@ class RestaurantsController(APIView):
         responses={201: RestaurantSerializer},
         tags=["Restaurants"],
     )
-    def post(self, request):
+    @inject
+    def post(self, request, service: Injected[RestaurantManagementService]):
         user = require_authenticated_user(request)
         serializer = RestaurantWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        restaurant = self.get_service().create_restaurant(
-            user=user,
-            data=serializer.validated_data,
-        )
+        restaurant = service.create_restaurant(user=user, data=serializer.validated_data)
         return api_data(
-            RestaurantSerializer(restaurant, context={"request": request}).data,
+            RestaurantSerializer(
+                restaurant,
+                context={"request": request, "file_service": service.file_service},
+            ).data,
             status_code=201,
         )
 
 
 
-class RestaurantDetailController(APIView):
+class RestaurantDetailController(MethodPermissionMixin, APIView):
     """Retrieve, update, or delete a restaurant."""
 
-    service_class = RestaurantService
+    method_permission_classes = {
+        "PATCH": [CanUpdateRestaurant],
+        "DELETE": [CanDeleteRestaurant],
+    }
     parser_classes = [JSONParser, FormParser, MultiPartParser]
-
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
 
     @extend_schema(
         summary="Get restaurant details",
@@ -134,9 +145,15 @@ class RestaurantDetailController(APIView):
         responses={200: RestaurantSerializer},
         tags=["Restaurants"],
     )
-    def get(self, request, slug):
-        restaurant = self.get_service().get_restaurant(slug)
-        return api_data(RestaurantSerializer(restaurant, context={"request": request}).data)
+    @inject
+    def get(self, request, slug, service: Injected[RestaurantManagementService]):
+        restaurant = service.get_restaurant(slug)
+        return api_data(
+            RestaurantSerializer(
+                restaurant,
+                context={"request": request, "file_service": service.file_service},
+            ).data
+        )
 
     @extend_schema(
         summary="Update restaurant",
@@ -145,9 +162,10 @@ class RestaurantDetailController(APIView):
         responses={200: RestaurantSerializer},
         tags=["Restaurants"],
     )
-    def patch(self, request, slug):
-        service = self.get_service()
+    @inject
+    def patch(self, request, slug, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(slug)
+        self.check_object_permissions(request, restaurant)
         user = require_authenticated_user(request)
         serializer = RestaurantUpdateSerializer(restaurant, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -156,7 +174,12 @@ class RestaurantDetailController(APIView):
             restaurant=restaurant,
             data=serializer.validated_data,
         )
-        return api_data(RestaurantSerializer(restaurant, context={"request": request}).data)
+        return api_data(
+            RestaurantSerializer(
+                restaurant,
+                context={"request": request, "file_service": service.file_service},
+            ).data
+        )
 
     @extend_schema(
         summary="Delete restaurant",
@@ -164,9 +187,10 @@ class RestaurantDetailController(APIView):
         responses={204: None},
         tags=["Restaurants"],
     )
-    def delete(self, request, slug):
-        service = self.get_service()
+    @inject
+    def delete(self, request, slug, service: Injected[RestaurantManagementService]):
         restaurant = service.get_restaurant(slug)
+        self.check_object_permissions(request, restaurant)
         user = require_authenticated_user(request)
         service.delete_restaurant(user=user, restaurant=restaurant)
         return Response(status=204)

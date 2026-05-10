@@ -1,25 +1,26 @@
 from django.db.models import Exists, OuterRef
 from rest_framework.views import APIView
+from wireup import Injected
+from wireup.integration.django import inject
 
 from api.rest import (
     api_data,
     require_authenticated_user,
 )
+from api.permissions import CanViewOwnerDashboard
 from restaurants.serializers import RestaurantSerializer
-from restaurants.services import RestaurantService
+from restaurants.ownership_service import RestaurantOwnershipService
 from restaurants.models import Favorite
 
 class OwnerRestaurantsController(APIView):
     """List restaurants owned by the current restaurant manager."""
 
-    service_class = RestaurantService
+    permission_classes = [CanViewOwnerDashboard]
 
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
-
-    def get(self, request):
+    @inject
+    def get(self, request, service: Injected[RestaurantOwnershipService]):
         user = require_authenticated_user(request)
-        restaurants = self.get_service().list_owned_restaurants(user)
+        restaurants = service.list_owned_restaurants(user)
         restaurants = restaurants.annotate(
             is_favorite_for_user=Exists(
                 Favorite.objects.filter(
@@ -29,19 +30,20 @@ class OwnerRestaurantsController(APIView):
             )
         )
         return api_data(
-            RestaurantSerializer(restaurants, many=True, context={"request": request}).data
+            RestaurantSerializer(
+                restaurants,
+                many=True,
+                context={"request": request, "file_service": service.file_service},
+            ).data
         )
 
 
 class OwnerDashboardController(APIView):
     """Return analytics for the current restaurant manager."""
 
-    service_class = RestaurantService
+    permission_classes = [CanViewOwnerDashboard]
 
-    def get_service(self) -> RestaurantService:
-        return self.service_class()
-
-    def get(self, request):
+    @inject
+    def get(self, request, service: Injected[RestaurantOwnershipService]):
         user = require_authenticated_user(request)
-        return api_data(self.get_service().get_owner_dashboard(user))
-
+        return api_data(service.get_owner_dashboard(user))
