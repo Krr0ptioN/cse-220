@@ -354,17 +354,22 @@ graph TB
         Users["Users (Auth)"]
         Restaurants["Restaurants (CRUD)"]
         Reviews["Reviews (Ratings + Text)"]
+    end
+
+    subgraph Infra["Infrastructure"]
+        DB[("SQLite / PostgreSQL")]
         Files["Files (Local / MinIO)"]
     end
 
-    DB[("SQLite / PostgreSQL")]
-
-    Pages -->|"REST API (JSON)"| Users
-    Components -->|"REST API (JSON)"| Restaurants
-    Query -->|"REST API (JSON)"| Reviews
+    Pages -->|"REST API (JSON)"| Backend
+    Pages --> Components
+    Pages --> Query
 
     Users --> Restaurants
     Restaurants --> Reviews
+
+    Users --> Files
+    Restaurants --> Files
     Reviews --> Files
 
     Users --> DB
