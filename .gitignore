@@ -98,3 +98,4 @@ storybook-static
 /.gemini
 /.opencode
 /opencode.json
+/apps/api/media/
